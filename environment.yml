@@ -1,0 +1,54 @@
+name: deepbach_pytorch
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - blas
+  - ca-certificates
+  - certifi
+  - cffi
+  - click
+  - freetype
+  - intel-openmp
+  - jpeg
+  - libedit
+  - libffi
+  - libgfortran-ng
+  - libpng
+  - libtiff
+  - mkl
+  - mkl_fft
+  - mkl_random
+  - ncurses
+  - ninja
+  - numpy
+  - numpy-base
+  - olefile
+  - openssl
+  - pillow
+  - pip
+  - pycparser
+  - python
+  - readline
+  - setuptools
+  - six
+  - sqlite
+  - tk
+  - wheel
+  - xz
+  - zlib
+  - pytorch
+  - torchvision
+  - pip:
+    - decorator==4.3.0
+    - flask==1.0.2
+    - flask-cors==3.0.7
+    - itsdangerous==1.1.0
+    - jinja2==2.10
+    - markupsafe==1.1.0
+    - music21==5.5.0
+    - torch==1.0.0
+    - tqdm==4.29.0
+    - werkzeug==0.14.1
+prefix: /home/gaetan/Public/Python/anaconda3/envs/deepbach_pytorch
+
