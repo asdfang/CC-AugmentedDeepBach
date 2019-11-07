@@ -19,11 +19,12 @@ You can clone this repository, install dependencies using Anaconda and download 
 model together with a dataset  
  with the following commands:
 ```
-git clone git@github.com:SonyCSL-Paris/DeepBach.git
+https://github.com/asdfang/CC-AugmentedDeepBach
 cd DeepBach
-conda env create --name deepbach_pytorch -f environment.yml
+conda env create --name deepbach_pytorch -f environment2.yml
 bash dl_dataset_and_models.sh
 ```
+Or follow the steps listed in `dl_dataset_and_models.sh`
 This will create a conda env named `deepbach_pytorch`.
 
 ### music21 editor
