@@ -38,6 +38,9 @@ class DatasetManager:
             os.mkdir(self.cache_dir)
 
     def get_dataset(self, name: str, **dataset_kwargs) -> MusicDataset:
+        """
+        write datasets to both datasets/ and tensor_datasets/ folder
+        """
         if name in all_datasets:
             return self.load_if_exists_or_initialize_and_save(
                 name=name,
@@ -73,8 +76,8 @@ class DatasetManager:
             dataset = torch.load(dataset.filepath)
             print(f'(the corresponding TensorDataset is not loaded)')
         else:
-            print(f'Creating {dataset.__repr__()}, '
-                  f'both tensor dataset and parameters')
+            print(f'Dataset not found at {dataset.filepath}')
+            print(f'Creating {dataset.__repr__()}, both tensor dataset and parameters')
             # initialize and force the computation of the tensor_dataset
             # first remove the cached data if it exists
             if os.path.exists(dataset.tensor_dataset_filepath):
@@ -82,8 +85,7 @@ class DatasetManager:
             # recompute dataset parameters and tensor_dataset
             # this saves the tensor_dataset in dataset.tensor_dataset_filepath
             tensor_dataset = dataset.tensor_dataset
-            # save all dataset parameters EXCEPT the tensor dataset
-            # which is stored elsewhere
+            # save all dataset parameters EXCEPT the tensor dataset which is stored elsewhere
             dataset.tensor_dataset = None
             torch.save(dataset, dataset.filepath)
             print(f'{dataset.__repr__()} saved in {dataset.filepath}')
@@ -93,7 +95,6 @@ class DatasetManager:
 
 if __name__ == '__main__':
     # Usage example
-
     dataset_manager = DatasetManager()
     subdivision = 4
     metadatas = [
@@ -109,12 +110,8 @@ if __name__ == '__main__':
         sequences_size=8,
         subdivision=subdivision
     )
-    (train_dataloader,
-     val_dataloader,
-     test_dataloader) = bach_chorales_dataset.data_loaders(
-        batch_size=128,
-        split=(0.85, 0.10)
-    )
+    train_dataloader, val_dataloader, test_dataloader = bach_chorales_dataset.data_loaders(batch_size=128,
+                                                                                           split=(0.85, 0.10))
     print('Num Train Batches: ', len(train_dataloader))
     print('Num Valid Batches: ', len(val_dataloader))
     print('Num Test Batches: ', len(test_dataloader))
