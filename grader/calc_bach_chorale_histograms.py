@@ -18,21 +18,17 @@ def chorale_note_histogram(chorale, key):
       nh['Rest'] += 1
   return nh
 
-def chorale_rhythm_histogram(chorale, i):
+def chorale_rhythm_histogram(chorale):
   rh = collections.Counter()
   for note_or_rest in chorale.flat.notesAndRests:
     rh[note_or_rest.duration.quarterLength] += 1
-    if note_or_rest.duration.quarterLength == 0.0:
-      print(i)
-      chorale.show()
-      chorale.show('txt')
   return rh
 
 #208, 270
 major_nh = collections.Counter()
 minor_nh = collections.Counter()
 all_rh = collections.Counter()
-for i, fname in tqdm(enumerate(music21.corpus.chorales.Iterator(209, 209, returnType='filename'))):
+for fname in tqdm(music21.corpus.chorales.Iterator(1, 371, returnType='filename')):
   chorale = music21.corpus.parse(fname)
   if is_valid(chorale):
     key = chorale.analyze('key')
@@ -45,9 +41,7 @@ for i, fname in tqdm(enumerate(music21.corpus.chorales.Iterator(209, 209, return
       minor_nh += chorale_nh
 
     # rhythm histogram
-    all_rh += chorale_rhythm_histogram(chorale, i)
-
-    
+    all_rh += chorale_rhythm_histogram(chorale, i)    
 
 print('major:')
 print(major_nh)
