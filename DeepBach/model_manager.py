@@ -63,12 +63,12 @@ class DeepBach:
         else:
             self.voice_models[main_voice_index].save()
 
-    def train(self, main_voice_index=None,
-              **kwargs):
+    def train(self, main_voice_index=None, **kwargs):
         if main_voice_index is None:
             for voice_index in range(self.num_voices):
                 self.train(main_voice_index=voice_index, **kwargs)
         else:
+            print(f'\nTraining voice model {main_voice_index}')
             voice_model = self.voice_models[main_voice_index]
             if self.activate_cuda:
                 voice_model.cuda()

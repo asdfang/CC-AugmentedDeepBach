@@ -26,7 +26,7 @@ from DeepBach.model_manager import DeepBach
               help='hidden size of the Linear layers')
 @click.option('--batch_size', default=256,
               help='training batch size')
-@click.option('--num_epochs', default=5,
+@click.option('--num_epochs', default=16,
               help='number of training epochs')
 @click.option('--train', is_flag=True,
               help='train the specified model for num_epochs')
@@ -46,8 +46,10 @@ def main(note_embedding_dim,
          num_iterations,
          sequence_length_ticks,
          ):
+
     dataset_manager = DatasetManager()
 
+    print('step 1/5: initialize empty metadata')
     metadatas = [
        FermataMetadata(),
        TickMetadata(subdivision=4),
@@ -59,12 +61,13 @@ def main(note_embedding_dim,
         'sequences_size': 8,
         'subdivision':    4
     }
-    bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(
-        name='bach_chorales',
-        **chorale_dataset_kwargs
-        )
+
+    print('step 2/5: load pre-existing dataset or generate new dataset')
+    bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales',
+                                                                        **chorale_dataset_kwargs)
     dataset = bach_chorales_dataset
 
+    print('step 3/5: create model architecture')
     deepbach = DeepBach(
         dataset=dataset,
         note_embedding_dim=note_embedding_dim,
@@ -76,19 +79,24 @@ def main(note_embedding_dim,
     )
 
     if train:
+        print('step 4/5: train model')
         deepbach.train(batch_size=batch_size,
                        num_epochs=num_epochs)
     else:
+        print('step 4/5: load model')
         deepbach.load()
         deepbach.cuda()
 
-    print('Generation')
+    # generate chorales
+    print('step 5/5: generation')
     score, tensor_chorale, tensor_metadata = deepbach.generation(
         num_iterations=num_iterations,
         sequence_length_ticks=sequence_length_ticks,
     )
-    score.show('txt')
-    score.show()
+    # score.show('txt')
+    chorale_name = "c1"
+    score.write("musicxml", chorale_name + ".musicxml")
+    score.write("midi", chorale_name + ".mid")
 
 
 if __name__ == '__main__':
