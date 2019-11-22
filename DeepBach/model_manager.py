@@ -21,6 +21,7 @@ class DeepBach:
                  lstm_hidden_size,
                  dropout_lstm,
                  linear_hidden_size,
+                 model_id,
                  ):
         self.dataset = dataset
         self.num_voices = self.dataset.num_voices
@@ -29,6 +30,7 @@ class DeepBach:
 
         self.voice_models = [VoiceModel(
             dataset=self.dataset,
+            model_id=model_id,
             main_voice_index=main_voice_index,
             note_embedding_dim=note_embedding_dim,
             meta_embedding_dim=meta_embedding_dim,
@@ -120,7 +122,6 @@ class DeepBach:
 
         # --Process arguments
         # initialize generated chorale
-        # tensor_chorale = self.dataset.empty_chorale(sequence_length_ticks)
         if tensor_chorale is None:
             tensor_chorale = self.dataset.random_score_tensor(
                 sequence_length_ticks)

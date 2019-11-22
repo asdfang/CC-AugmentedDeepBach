@@ -19,6 +19,7 @@ from DeepBach.data_utils import reverse_tensor, mask_entry
 class VoiceModel(nn.Module):
     def __init__(self,
                  dataset: ChoraleDataset,
+                 model_id: int,
                  main_voice_index: int,
                  note_embedding_dim: int,
                  meta_embedding_dim: int,
@@ -29,6 +30,7 @@ class VoiceModel(nn.Module):
                  ):
         super(VoiceModel, self).__init__()
         self.dataset = dataset
+        self.model_id = model_id
         self.main_voice_index = main_voice_index
         self.note_embedding_dim = note_embedding_dim
         self.meta_embedding_dim = meta_embedding_dim
@@ -188,15 +190,15 @@ class VoiceModel(nn.Module):
 
         return left_embedded, center_embedded, right_embedded
 
-    def save(self, best=False):
+    def save(self, final=False):
         model_name = self.__repr__()
-        if best:
-            model_name += '-best'
-        torch.save(self.state_dict(), f'models/{model_name}')
+        if final:
+            model_name += '-final'
+        torch.save(self.state_dict(), f'models/{self.model_id}/{model_name}')
         print(f'Model {model_name} saved')
 
     def load(self):
-        state_dict = torch.load('models/' + self.__repr__(),
+        state_dict = torch.load(f'models/{self.model_id}/' + self.__repr__(),
                                 map_location=lambda storage, loc: storage)
         print(f'Loading {self.__repr__()}')
         self.load_state_dict(state_dict)
@@ -245,7 +247,7 @@ class VoiceModel(nn.Module):
 
             # update model with lowest validation loss
             if epoch == 0 or loss < np.amin(loss_over_epochs['validation']):
-                self.save(best=True)
+                self.save()
 
             loss_over_epochs['validation'].append(loss)
             acc_over_epochs['validation'].append(acc)
@@ -253,10 +255,10 @@ class VoiceModel(nn.Module):
             # early stopping
             if epoch >= 2 and non_decreasing(loss_over_epochs['validation'][-3:]):
                 print('Three consecutive iterations with increase in validation loss')
-                self.save()
+                self.save(final=True)
                 break
 
-            self.save()
+            self.save(final=True)
 
         self.plot_curves(loss_over_epochs, metric='loss')
         self.plot_curves(acc_over_epochs, metric='accuracy')

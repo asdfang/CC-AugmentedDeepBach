@@ -34,6 +34,8 @@ from DeepBach.model_manager import DeepBach
               help='number of parallel pseudo-Gibbs sampling iterations')
 @click.option('--sequence_length_ticks', default=64,
               help='length of the generated chorale (in ticks)')
+@click.option('--model_id', default=0,
+              help='ID of the model to train and generate from')
 def main(note_embedding_dim,
          meta_embedding_dim,
          num_layers,
@@ -45,6 +47,7 @@ def main(note_embedding_dim,
          train,
          num_iterations,
          sequence_length_ticks,
+         model_id,
          ):
 
     dataset_manager = DatasetManager()
@@ -75,7 +78,8 @@ def main(note_embedding_dim,
         num_layers=num_layers,
         lstm_hidden_size=lstm_hidden_size,
         dropout_lstm=dropout_lstm,
-        linear_hidden_size=linear_hidden_size
+        linear_hidden_size=linear_hidden_size,
+        model_id=model_id,
     )
 
     if train:
@@ -95,8 +99,9 @@ def main(note_embedding_dim,
     )
     # score.show('txt')
     chorale_name = "c1"
-    score.write("musicxml", chorale_name + ".musicxml")
-    score.write("midi", chorale_name + ".mid")
+    score.write('musicxml', f'generations/{chorale_name}.musicxml')
+    score.write('midi', f'generations/{chorale_name}.mid')
+    print(f'Saved chorale {chorale_name} in generations/')
 
 
 if __name__ == '__main__':
