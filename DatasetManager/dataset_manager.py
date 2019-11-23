@@ -38,9 +38,6 @@ class DatasetManager:
             os.mkdir(self.cache_dir)
 
     def get_dataset(self, name: str, **dataset_kwargs) -> MusicDataset:
-        """
-        write datasets to both datasets/ and tensor_datasets/ folder
-        """
         if name in all_datasets:
             return self.load_if_exists_or_initialize_and_save(
                 name=name,

@@ -34,7 +34,8 @@ class MusicDataset(ABC):
         """
 
         :param score: music21 score object
-        :return: torch tensor, with the score representation as a tensor
+        :return: torch tensor, with the score representation
+                 as a tensor
         """
         pass
     

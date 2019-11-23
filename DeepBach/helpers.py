@@ -5,7 +5,6 @@
 import torch
 from torch.autograd import Variable
 import re, os
-import re
 
 
 def cuda_variable(tensor, volatile=False):
@@ -60,7 +59,9 @@ def read_train_log(model_id):
             val_acc_matches = re.findall("Validation accuracy: (\d*\.\d*)", curr_epoch)
             val_acc = [float(l) for l in val_acc_matches]
 
-    return
+    loss_over_epochs = {'training': train_loss, 'validation': val_loss}
+    acc_over_epochs = {'training': train_acc, 'validation': val_acc}
+    return loss_over_epochs, acc_over_epochs
 
 
 def ensure_dir(directory):

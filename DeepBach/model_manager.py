@@ -119,72 +119,72 @@ class DeepBach:
         )
         """
         self.eval_phase()
-
-        # --Process arguments
-        # initialize generated chorale if it is not provided
-        if tensor_chorale is None:
-            tensor_chorale = self.dataset.random_score_tensor(sequence_length_ticks)
-        else:
-            sequence_length_ticks = tensor_chorale.size(1)
-
-        # initialize metadata if it is not provided
-        if tensor_metadata is None:
-            test_chorale = next(self.dataset.corpus_it_gen().__iter__())
-            tensor_metadata = self.dataset.get_metadata_tensor(test_chorale)
-
-            # todo do not work if metadata_length_ticks > sequence_length_ticks
-            tensor_metadata = tensor_metadata[:, :sequence_length_ticks, :]
-        else:
-            tensor_metadata_length = tensor_metadata.size(1)
-            assert tensor_metadata_length == sequence_length_ticks
-
-        # fix fermatas if they are provided
-        if fermatas is not None:
-            tensor_metadata = self.dataset.set_fermatas(tensor_metadata,
-                                                        fermatas)
-
-        # timesteps_ticks is the number of ticks on which we unroll the LSTMs
-        # it is also the padding size
-        timesteps_ticks = self.dataset.sequences_size * self.dataset.subdivision // 2
-
-        if time_index_range_ticks is None:
-            time_index_range_ticks = [timesteps_ticks, sequence_length_ticks + timesteps_ticks]
-        else:
-            a_ticks, b_ticks = time_index_range_ticks
-            # assert that [a,b] is a subset of [0, sequence_length_ticks]
-            assert 0 <= a_ticks < b_ticks <= sequence_length_ticks
-            time_index_range_ticks = [a_ticks + timesteps_ticks, b_ticks + timesteps_ticks]
-
-        if voice_index_range is None:
-            voice_index_range = [0, self.dataset.num_voices]
-
-        tensor_chorale = self.dataset.extract_score_tensor_with_padding(
-            tensor_score=tensor_chorale,
-            start_tick=-timesteps_ticks,
-            end_tick=sequence_length_ticks + timesteps_ticks
-        )
-
-        tensor_metadata_padded = self.dataset.extract_metadata_with_padding(
-            tensor_metadata=tensor_metadata,
-            start_tick=-timesteps_ticks,
-            end_tick=sequence_length_ticks + timesteps_ticks
-        )
-
-        # randomize regenerated part
-        if random_init:
-            a, b = time_index_range_ticks
-            tensor_chorale[:, a:b] = self.dataset.random_score_tensor(b - a)
-
-        tensor_chorale = self.parallel_gibbs(
-            tensor_chorale=tensor_chorale,
-            tensor_metadata=tensor_metadata_padded,
-            num_iterations=num_iterations,
-            timesteps_ticks=timesteps_ticks,
-            temperature=temperature,
-            batch_size_per_voice=batch_size_per_voice,
-            time_index_range_ticks=time_index_range_ticks,
-            voice_index_range=voice_index_range,
-        )
+        #
+        # # --Process arguments
+        # # initialize generated chorale if it is not provided
+        # if tensor_chorale is None:
+        #     tensor_chorale = self.dataset.random_score_tensor(sequence_length_ticks)
+        # else:
+        #     sequence_length_ticks = tensor_chorale.size(1)
+        #
+        # # initialize metadata if it is not provided
+        # if tensor_metadata is None:
+        #     test_chorale = next(self.dataset.corpus_it_gen().__iter__())
+        #     tensor_metadata = self.dataset.get_metadata_tensor(test_chorale)
+        #
+        #     # todo do not work if metadata_length_ticks > sequence_length_ticks
+        #     tensor_metadata = tensor_metadata[:, :sequence_length_ticks, :]
+        # else:
+        #     tensor_metadata_length = tensor_metadata.size(1)
+        #     assert tensor_metadata_length == sequence_length_ticks
+        #
+        # # fix fermatas if they are provided
+        # if fermatas is not None:
+        #     tensor_metadata = self.dataset.set_fermatas(tensor_metadata,
+        #                                                 fermatas)
+        #
+        # # timesteps_ticks is the number of ticks on which we unroll the LSTMs
+        # # it is also the padding size
+        # timesteps_ticks = self.dataset.sequences_size * self.dataset.subdivision // 2
+        #
+        # if time_index_range_ticks is None:
+        #     time_index_range_ticks = [timesteps_ticks, sequence_length_ticks + timesteps_ticks]
+        # else:
+        #     a_ticks, b_ticks = time_index_range_ticks
+        #     # assert that [a,b] is a subset of [0, sequence_length_ticks]
+        #     assert 0 <= a_ticks < b_ticks <= sequence_length_ticks
+        #     time_index_range_ticks = [a_ticks + timesteps_ticks, b_ticks + timesteps_ticks]
+        #
+        # if voice_index_range is None:
+        #     voice_index_range = [0, self.dataset.num_voices]
+        #
+        # tensor_chorale = self.dataset.extract_score_tensor_with_padding(
+        #     tensor_score=tensor_chorale,
+        #     start_tick=-timesteps_ticks,
+        #     end_tick=sequence_length_ticks + timesteps_ticks
+        # )
+        #
+        # tensor_metadata_padded = self.dataset.extract_metadata_with_padding(
+        #     tensor_metadata=tensor_metadata,
+        #     start_tick=-timesteps_ticks,
+        #     end_tick=sequence_length_ticks + timesteps_ticks
+        # )
+        #
+        # # randomize regenerated part
+        # if random_init:
+        #     a, b = time_index_range_ticks
+        #     tensor_chorale[:, a:b] = self.dataset.random_score_tensor(b - a)
+        #
+        # tensor_chorale = self.parallel_gibbs(
+        #     tensor_chorale=tensor_chorale,
+        #     tensor_metadata=tensor_metadata_padded,
+        #     num_iterations=num_iterations,
+        #     timesteps_ticks=timesteps_ticks,
+        #     temperature=temperature,
+        #     batch_size_per_voice=batch_size_per_voice,
+        #     time_index_range_ticks=time_index_range_ticks,
+        #     voice_index_range=voice_index_range,
+        # )
 
         score = self.dataset.tensor_to_score(
             tensor_score=tensor_chorale)
