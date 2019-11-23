@@ -1,6 +1,7 @@
 import music21
 import torch
 import numpy as np
+import collections
 
 from music21 import interval, stream
 from torch.utils.data import TensorDataset
@@ -10,6 +11,7 @@ from DatasetManager.helpers import standard_name, SLUR_SYMBOL, START_SYMBOL, END
     standard_note, OUT_OF_RANGE, REST_SYMBOL
 from DatasetManager.metadata import FermataMetadata
 from DatasetManager.music_dataset import MusicDataset
+from grader.histogram_helpers import *
 
 
 class ChoraleDataset(MusicDataset):
@@ -46,6 +48,7 @@ class ChoraleDataset(MusicDataset):
         self.voice_ranges = None  # in midi pitch
         self.metadatas = metadatas
         self.subdivision = subdivision
+        self.histograms = None
 
     def __repr__(self):
         return f'ChoraleDataset(' \
@@ -61,51 +64,45 @@ class ChoraleDataset(MusicDataset):
                 if self.is_valid(chorale)
                 )
 
-    def make_tensor_dataset(self):
+    def make_tensor_dataset(self, include_transpositions=True):
         """
         Implementation of the make_tensor_dataset abstract base class
         """
-        # todo check on chorale with Chord
+
         print('Making tensor dataset')
+
         self.compute_index_dicts()
         self.compute_voice_ranges()
         one_tick = 1 / self.subdivision
-        print(f'one_tick: {one_tick}')
         chorale_tensor_dataset = []
         metadata_tensor_dataset = []
         for chorale_id, chorale in tqdm(enumerate(self.iterator_gen())):
-            chorale.write('midi', f'generations/real{chorale_id}.mid')
             # precompute all possible transpositions and corresponding metadatas
             chorale_transpositions = {}
             metadatas_transpositions = {}
 
-            # for debugging
-            if chorale_id > 2:
-                break
-
-            # main loop
-            print(f'chorale.flat.lowestOffset: {chorale.flat.lowestOffset}')
-            print(f'self.sequences_size: {self.sequences_size}')
-            print(f'chorale.flat.lowestOffset - (self.sequences_size - one_tick): {chorale.flat.lowestOffset - (self.sequences_size - one_tick)}')
-            print(f'chorale.flat.highestOffset: {chorale.flat.highestOffset}')
-
+            # for every 16th-note offset in the chorale
             for offsetStart in np.arange(
                     chorale.flat.lowestOffset - (self.sequences_size - one_tick),
                     chorale.flat.highestOffset,
                     one_tick):
+
                 offsetEnd = offsetStart + self.sequences_size
-                print(f'offsetStart: {offsetStart}')
-                print(f'offsetEnd: {offsetEnd}')
+
                 current_subseq_ranges = self.voice_range_in_subsequence(
                     chorale,
                     offsetStart=offsetStart,
                     offsetEnd=offsetEnd)
 
-                transposition = self.min_max_transposition(current_subseq_ranges)
-                min_transposition_subsequence, max_transposition_subsequence = transposition
+                if include_transpositions:
+                    transposition = self.min_max_transposition(current_subseq_ranges)
+                    min_transposition_subsequence, max_transposition_subsequence = transposition
+                    transpositions = range(min_transposition_subsequence, max_transposition_subsequence + 1)
+                else:
+                    transpositions = range(1)           # corresponds to no transposition
 
-                for semi_tone in range(min_transposition_subsequence,
-                                       max_transposition_subsequence + 1):
+                # for every possible transposition
+                for semi_tone in transpositions:
                     start_tick = int(offsetStart * self.subdivision)
                     end_tick = int(offsetEnd * self.subdivision)
 
@@ -146,6 +143,7 @@ class ChoraleDataset(MusicDataset):
 
         print(f'Sizes: {chorale_tensor_dataset.size()}, {metadata_tensor_dataset.size()}')
         return dataset
+
 
     def transposed_score_and_metadata_tensors(self, score, semi_tone):
         """
@@ -220,6 +218,9 @@ class ChoraleDataset(MusicDataset):
         return metadata_tensor
 
     def min_max_transposition(self, current_subseq_ranges):
+        """
+        return min and max transposition for the subsequence, in MIDI pitches
+        """
         if current_subseq_ranges is None:
             # todo might be too restrictive
             # there is no note in one part
@@ -317,7 +318,7 @@ class ChoraleDataset(MusicDataset):
         :param chorale:
         :param offsetStart:
         :param offsetEnd:
-        :return:
+        :return: list of (min, max midi pitch) for each voice in subsequence
         """
         voice_ranges = []
         for part in chorale.parts[:self.num_voices]:
@@ -331,6 +332,9 @@ class ChoraleDataset(MusicDataset):
         return voice_ranges
 
     def voice_range_in_part(self, part, offsetStart, offsetEnd):
+        """
+        return min and max midi pitch of notes between offsetStart and offsetEnd of part
+        """
         notes_in_subsequence = part.flat.getElementsByOffset(
             offsetStart,
             offsetEnd,
@@ -521,3 +525,35 @@ class ChoraleDataset(MusicDataset):
             part.append(f)
             score.insert(part)
         return score
+
+    def calculate_histograms(self):
+        print('Calculating ground-truth histograms over Bach chorales')
+        major_nh = collections.Counter()
+        minor_nh = collections.Counter()
+        all_rh = collections.Counter()
+        # all_ih = collections.Counter()
+        for chorale in tqdm(self.iterator_gen()):
+            # note histograms
+            key = chorale.analyze('key')
+            chorale_nh = get_note_histogram(chorale, key)
+            if key.mode == 'major':
+                major_nh += chorale_nh
+            else:
+                minor_nh += chorale_nh
+
+            # rhythm histogram
+            all_rh += get_rhythm_histogram(chorale)
+
+            # interval histogram
+            # all_ih += chorale_interval_histogram(chorale)
+
+        histograms = {'major_note_histogram': major_nh,
+                      'minor_note_histogram': minor_nh,
+                      'rhythm_histogram': all_rh}
+
+        # normalize by count total
+        for hist in histograms:
+            histograms[hist] = normalize_histogram(histograms[hist])
+
+        self.histograms = histograms
+

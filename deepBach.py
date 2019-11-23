@@ -10,6 +10,9 @@ from DatasetManager.metadata import FermataMetadata, TickMetadata, KeyMetadata
 
 from DeepBach.model_manager import DeepBach
 from DeepBach.helpers import *
+from grader.grader import score_chorale
+from tqdm import tqdm
+from grader.histogram_helpers import plot_distributions
 
 
 @click.command()
@@ -54,7 +57,7 @@ def main(note_embedding_dim,
 
     dataset_manager = DatasetManager()
 
-    print('step 1/5: initialize empty metadata')
+    print('step 1/6: initialize empty metadata')
     metadatas = [
        FermataMetadata(),
        TickMetadata(subdivision=4),
@@ -67,20 +70,12 @@ def main(note_embedding_dim,
         'subdivision':    4
     }
 
-    print('step 2/5: load pre-existing dataset or generate new dataset')
-    bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales',
-                                                                        **chorale_dataset_kwargs)
-    return
+    print('step 2/6: load pre-existing dataset or generate new dataset')
+    bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales', **chorale_dataset_kwargs)
 
     dataset = bach_chorales_dataset
 
-    train_dataloader, val_dataloader, test_dataloader = bach_chorales_dataset.data_loaders(batch_size=128,
-                                                                                           split=(0.85, 0.10))
-    print('Num Train Batches: ', len(train_dataloader))
-    print('Num Valid Batches: ', len(val_dataloader))
-    print('Num Test Batches: ', len(test_dataloader))
-
-    print('step 3/5: create model architecture')
+    print('step 3/6: create model architecture')
     deepbach = DeepBach(
         dataset=dataset,
         note_embedding_dim=note_embedding_dim,
@@ -93,41 +88,62 @@ def main(note_embedding_dim,
     )
 
     if train:
-        print('step 4/5: train model')
+        print('step 4/6: train model')
         deepbach.train(batch_size=batch_size,
                        num_epochs=num_epochs)
     else:
-        print('step 4/5: load model')
+        print('step 4/6: load model')
         deepbach.load()
         deepbach.cuda()
 
     # generate chorales
-    print('step 5/5: generation')
+    print('step 5/6: generation')
 
-    for i, (tensor_chorale_batch, tensor_metadata_batch) in enumerate(test_dataloader):
-        tensor_chorale_batch = cuda_variable(tensor_chorale_batch).long().clone().to('cpu')
-        tensor_metadata_batch = cuda_variable(tensor_metadata_batch).long().clone().to('cpu')
-        for j in range(tensor_chorale_batch.size(0)):
-            tensor_chorale = tensor_chorale_batch[j]
-            tensor_metadata = tensor_metadata_batch[j]
+    # for batch_id, (tensor_chorale_batch, tensor_metadata_batch) in enumerate(test_dataloader):
+    #     tensor_chorale_batch = cuda_variable(tensor_chorale_batch).long().clone().to('cpu')
+    #     tensor_metadata_batch = cuda_variable(tensor_metadata_batch).long().clone().to('cpu')
+    #     for i in range(tensor_chorale_batch.size(0)):
+    #         tensor_chorale = tensor_chorale_batch[i]
+    #         tensor_metadata = tensor_metadata_batch[i]
+    #
+    #         score, tensor_chorale, tensor_metadata = deepbach.generation(
+    #             num_iterations=num_iterations,
+    #             sequence_length_ticks=sequence_length_ticks,
+    #             tensor_chorale=tensor_chorale,
+    #             tensor_metadata=tensor_metadata,
+    #             voice_index_range=[1, 3],
+    #         )
+    #
+    #         # score.show('txt')
+    #         ensure_dir(f'generations/{model_id}')
+    #         chorale_name = f'c{i}'
+    #         score.write('musicxml', f'generations/{model_id}/{chorale_name}.musicxml')
+    #         score.write('midi', f'generations/{model_id}/{chorale_name}.mid')
+    #         print(f'Saved chorale {chorale_name} in generations/{model_id}/')
 
-            score, tensor_chorale, tensor_metadata = deepbach.generation(
-                num_iterations=num_iterations,
-                sequence_length_ticks=sequence_length_ticks,
-                tensor_chorale=tensor_chorale,
-                tensor_metadata=tensor_metadata,
-                voice_index_range=[1, 3],
-            )
+    print('step 6/6: score chorales')
+    dataset.calculate_histograms()
+    score_dict = {}
+    count = 50
+    print('Scoring real chorales')
+    scores = []
+    for chorale_id, chorale in tqdm(enumerate(dataset.iterator_gen())):
+        scores.append(score_chorale(chorale, dataset))
+        if chorale_id == count:
+            break
+    score_dict.update({'real chorales': scores})
 
-            # score.show('txt')
-            ensure_dir(f'generations/{model_id}')
-            chorale_name = f'c{j}'
-            score.write('musicxml', f'generations/{model_id}/{chorale_name}.musicxml')
-            score.write('midi', f'generations/{model_id}/{chorale_name}.mid')
-            print(f'Saved chorale {chorale_name} in generations/{model_id}/')
+    print('Generating and scoring generated chorales')
+    scores = []
+    for i in tqdm(range(count)):
+        chorale, tensor_chorale, tensor_metadata = deepbach.generation(
+            num_iterations=num_iterations,
+            sequence_length_ticks=sequence_length_ticks,
+        )
+        scores.append(score_chorale(chorale, dataset))
+    score_dict.update({'generated chorales': scores})
 
-            if j > 5:
-                return
+    plot_distributions(score_dict)
 
 
 if __name__ == '__main__':

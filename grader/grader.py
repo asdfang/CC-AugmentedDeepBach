@@ -1,19 +1,28 @@
 import click
-import music21
+from grader.histogram_helpers import *
+from scipy.stats import wasserstein_distance
 
 
-@click.command()
-@click.argument('filename')
-def main(filename):
-    chorale = music21.converter.parse(filename)
-    chorale.show('txt')
+def score_chorale(chorale, dataset):
+    """
+    Arguments
+        chorale: a music21 Stream object
+        dataset: a ChoraleDataset object
 
-    grade(chorale)
+    return score
+    """
+    assert dataset.histograms is not None
 
+    key = chorale.analyze('key')
+    chorale_histogram = normalize_histogram(get_note_histogram(chorale, key))
 
-def grade(chorale):
-    return 0
+    if key.mode == 'major':
+        dataset_histogram = dataset.histograms['major_note_histogram']
+    else:
+        dataset_histogram = dataset.histograms['minor_note_histogram']
 
+    chorale_list = [chorale_histogram[key] for key in dataset_histogram]
+    dataset_list = [dataset_histogram[key] for key in dataset_histogram]
 
-if __name__ == '__main__':
-    main()
+    return wasserstein_distance(chorale_list, dataset_list)
+

@@ -22,7 +22,7 @@ class MusicDataset(ABC):
         pass
 
     @abstractmethod
-    def make_tensor_dataset(self):
+    def make_tensor_dataset(self, include_transpositions=True):
         """
 
         :return: TensorDataset
@@ -130,7 +130,7 @@ class MusicDataset(ABC):
             else:
                 print(f'Creating {self.__repr__()} TensorDataset'
                       f' since it is not cached')
-                self._tensor_dataset = self.make_tensor_dataset()
+                self._tensor_dataset = self.make_tensor_dataset(include_transpositions=False)
                 torch.save(self._tensor_dataset, self.tensor_dataset_filepath)
                 print(f'TensorDataset for {self.__repr__()} '
                       f'saved in {self.tensor_dataset_filepath}')
