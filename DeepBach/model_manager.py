@@ -21,6 +21,7 @@ class DeepBach:
                  lstm_hidden_size,
                  dropout_lstm,
                  linear_hidden_size,
+                 model_id,
                  ):
         self.dataset = dataset
         self.num_voices = self.dataset.num_voices
@@ -29,6 +30,7 @@ class DeepBach:
 
         self.voice_models = [VoiceModel(
             dataset=self.dataset,
+            model_id=model_id,
             main_voice_index=main_voice_index,
             note_embedding_dim=note_embedding_dim,
             meta_embedding_dim=meta_embedding_dim,
@@ -63,12 +65,12 @@ class DeepBach:
         else:
             self.voice_models[main_voice_index].save()
 
-    def train(self, main_voice_index=None,
-              **kwargs):
+    def train(self, main_voice_index=None, **kwargs):
         if main_voice_index is None:
             for voice_index in range(self.num_voices):
                 self.train(main_voice_index=voice_index, **kwargs)
         else:
+            print(f'\nTraining voice model {main_voice_index}')
             voice_model = self.voice_models[main_voice_index]
             if self.activate_cuda:
                 voice_model.cuda()
@@ -87,7 +89,7 @@ class DeepBach:
                    temperature=1.0,
                    batch_size_per_voice=8,
                    num_iterations=None,
-                   sequence_length_ticks=160,
+                   sequence_length_ticks=64,
                    tensor_chorale=None,
                    tensor_metadata=None,
                    time_index_range_ticks=None,
@@ -100,9 +102,9 @@ class DeepBach:
         :param temperature:
         :param batch_size_per_voice:
         :param num_iterations:
-        :param sequence_length_ticks:
-        :param tensor_chorale:
-        :param tensor_metadata:
+        :param sequence_length_ticks: length of the generated chorale (in ticks)
+        :param tensor_chorale: chorale with parts fixed
+        :param tensor_metadata: metadata with things fixed
         :param time_index_range_ticks: list of two integers [a, b] or None; can be used \
         to regenerate only the portion of the score between timesteps a and b
         :param voice_index_range: list of two integers [a, b] or None; can be used \
@@ -119,15 +121,13 @@ class DeepBach:
         self.eval_phase()
 
         # --Process arguments
-        # initialize generated chorale
-        # tensor_chorale = self.dataset.empty_chorale(sequence_length_ticks)
+        # initialize generated chorale if it is not provided
         if tensor_chorale is None:
-            tensor_chorale = self.dataset.random_score_tensor(
-                sequence_length_ticks)
+            tensor_chorale = self.dataset.random_score_tensor(sequence_length_ticks)
         else:
             sequence_length_ticks = tensor_chorale.size(1)
 
-        # initialize metadata
+        # initialize metadata if it is not provided
         if tensor_metadata is None:
             test_chorale = next(self.dataset.corpus_it_gen().__iter__())
             tensor_metadata = self.dataset.get_metadata_tensor(test_chorale)
@@ -138,6 +138,7 @@ class DeepBach:
             tensor_metadata_length = tensor_metadata.size(1)
             assert tensor_metadata_length == sequence_length_ticks
 
+        # fix fermatas if they are provided
         if fermatas is not None:
             tensor_metadata = self.dataset.set_fermatas(tensor_metadata,
                                                         fermatas)
@@ -145,10 +146,12 @@ class DeepBach:
         # timesteps_ticks is the number of ticks on which we unroll the LSTMs
         # it is also the padding size
         timesteps_ticks = self.dataset.sequences_size * self.dataset.subdivision // 2
+
         if time_index_range_ticks is None:
             time_index_range_ticks = [timesteps_ticks, sequence_length_ticks + timesteps_ticks]
         else:
             a_ticks, b_ticks = time_index_range_ticks
+            # assert that [a,b] is a subset of [0, sequence_length_ticks]
             assert 0 <= a_ticks < b_ticks <= sequence_length_ticks
             time_index_range_ticks = [a_ticks + timesteps_ticks, b_ticks + timesteps_ticks]
 
@@ -170,8 +173,7 @@ class DeepBach:
         # randomize regenerated part
         if random_init:
             a, b = time_index_range_ticks
-            tensor_chorale[:, a:b] = self.dataset.random_score_tensor(
-                b - a)
+            tensor_chorale[:, a:b] = self.dataset.random_score_tensor(b - a)
 
         tensor_chorale = self.parallel_gibbs(
             tensor_chorale=tensor_chorale,
@@ -233,7 +235,6 @@ class DeepBach:
         for iteration in tqdm(range(num_iterations)):
             # annealing
             temperature = max(min_temperature, temperature * 0.9993)
-            # print(temperature)
             time_indexes_ticks = {}
             probas = {}
 

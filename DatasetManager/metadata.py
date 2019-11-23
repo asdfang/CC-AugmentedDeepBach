@@ -30,54 +30,6 @@ class Metadata:
         raise NotImplementedError
 
 
-class IsPlayingMetadata(Metadata):
-    def __init__(self, voice_index, min_num_ticks):
-        """
-        Metadata that indicates if a voice is playing
-        Voice i is considered to be muted if more than 'min_num_ticks' contiguous
-        ticks contain a rest.
-
-
-        :param voice_index: index of the voice to take into account
-        :param min_num_ticks: minimum length in ticks for a rest to be taken
-        into account in the metadata
-        """
-        super(IsPlayingMetadata, self).__init__()
-        self.min_num_ticks = min_num_ticks
-        self.voice_index = voice_index
-        self.is_global = False
-        self.num_values = 2
-        self.name = 'isplaying'
-
-    def get_index(self, value):
-        return int(value)
-
-    def get_value(self, index):
-        return bool(index)
-
-    def evaluate(self, chorale, subdivision):
-        """
-        takes a music21 chorale as input
-        """
-        length = int(chorale.duration.quarterLength * subdivision)
-        metadatas = np.ones(shape=(length,))
-        part = chorale.parts[self.voice_index]
-
-        for note_or_rest in part.notesAndRests:
-            is_playing = True
-            if note_or_rest.isRest:
-                if note_or_rest.quarterLength * subdivision >= self.min_num_ticks:
-                    is_playing = False
-            # these should be integer values
-            start_tick = note_or_rest.offset * subdivision
-            end_tick = start_tick + note_or_rest.quarterLength * subdivision
-            metadatas[start_tick:end_tick] = self.get_index(is_playing)
-        return metadatas
-
-    def generate(self, length):
-        return np.ones(shape=(length,))
-
-
 class TickMetadata(Metadata):
     """
     Metadata class that tracks on which subdivision of the beat we are on
@@ -109,56 +61,6 @@ class TickMetadata(Metadata):
             lambda x: x % self.num_values,
             range(length)
         )))
-
-
-class ModeMetadata(Metadata):
-    """
-    Metadata class that indicates the current mode of the melody
-    can be major, minor or other
-    """
-
-    def __init__(self):
-        super(ModeMetadata, self).__init__()
-        self.is_global = False
-        self.num_values = 3  # major, minor or other
-        self.name = 'mode'
-
-    def get_index(self, value):
-        if value == 'major':
-            return 1
-        if value == 'minor':
-            return 2
-        return 0
-
-    def get_value(self, index):
-        if index == 1:
-            return 'major'
-        if index == 2:
-            return 'minor'
-        return 'other'
-
-    def evaluate(self, chorale, subdivision):
-        # todo add measures when in midi
-        # init key analyzer
-        ka = analysis.floatingKey.KeyAnalyzer(chorale)
-        res = ka.run()
-
-        measure_offset_map = chorale.parts[0].measureOffsetMap()
-        length = int(chorale.duration.quarterLength * subdivision)  # in 16th notes
-
-        modes = np.zeros((length,))
-
-        measure_index = -1
-        for time_index in range(length):
-            beat_index = time_index / subdivision
-            if beat_index in measure_offset_map:
-                measure_index += 1
-                modes[time_index] = self.get_index(res[measure_index].mode)
-
-        return np.array(modes, dtype=np.int32)
-
-    def generate(self, length):
-        return np.full((length,), self.get_index('major'))
 
 
 class KeyMetadata(Metadata):

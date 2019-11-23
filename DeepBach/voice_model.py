@@ -3,10 +3,13 @@
 """
 
 import random
+import os
 
+import matplotlib.pylab as plt
 import torch
+import numpy as np
 from DatasetManager.chorale_dataset import ChoraleDataset
-from DeepBach.helpers import cuda_variable, init_hidden
+from DeepBach.helpers import *
 
 from torch import nn
 
@@ -16,6 +19,7 @@ from DeepBach.data_utils import reverse_tensor, mask_entry
 class VoiceModel(nn.Module):
     def __init__(self,
                  dataset: ChoraleDataset,
+                 model_id: int,
                  main_voice_index: int,
                  note_embedding_dim: int,
                  meta_embedding_dim: int,
@@ -26,6 +30,7 @@ class VoiceModel(nn.Module):
                  ):
         super(VoiceModel, self).__init__()
         self.dataset = dataset
+        self.model_id = model_id
         self.main_voice_index = main_voice_index
         self.note_embedding_dim = note_embedding_dim
         self.meta_embedding_dim = meta_embedding_dim
@@ -185,12 +190,17 @@ class VoiceModel(nn.Module):
 
         return left_embedded, center_embedded, right_embedded
 
-    def save(self):
-        torch.save(self.state_dict(), 'models/' + self.__repr__())
-        print(f'Model {self.__repr__()} saved')
+    def save(self, final=False):
+        model_name = self.__repr__()
+        if final:
+            model_name += '-final'
+
+        ensure_dir(f'models/{self.model_id}')
+        torch.save(self.state_dict(), f'models/{self.model_id}/{model_name}')
+        print(f'Model {model_name} saved')
 
     def load(self):
-        state_dict = torch.load('models/' + self.__repr__(),
+        state_dict = torch.load(f'models/{self.model_id}/' + self.__repr__(),
                                 map_location=lambda storage, loc: storage)
         print(f'Loading {self.__repr__()}')
         self.load_state_dict(state_dict)
@@ -211,28 +221,49 @@ class VoiceModel(nn.Module):
                     batch_size=16,
                     num_epochs=10,
                     optimizer=None):
+
+        loss_over_epochs = {'training': [], 'validation': []}
+        acc_over_epochs = {'training': [], 'validation': []}
+
         for epoch in range(num_epochs):
             print(f'===Epoch {epoch}===')
-            (dataloader_train,
-             dataloader_val,
-             dataloader_test) = self.dataset.data_loaders(
-                batch_size=batch_size,
-            )
+            dataloader_train, dataloader_val, dataloader_test = self.dataset.data_loaders(batch_size=batch_size)
 
             loss, acc = self.loss_and_acc(dataloader_train,
                                           optimizer=optimizer,
                                           phase='train')
+
             print(f'Training loss: {loss}')
             print(f'Training accuracy: {acc}')
-            # writer.add_scalar('data/training_loss', loss, epoch)
-            # writer.add_scalar('data/training_acc', acc, epoch)
+
+            loss_over_epochs['training'].append(loss)
+            acc_over_epochs['training'].append(acc)
 
             loss, acc = self.loss_and_acc(dataloader_val,
                                           optimizer=None,
                                           phase='test')
+
             print(f'Validation loss: {loss}')
             print(f'Validation accuracy: {acc}')
-            self.save()
+
+            # update model with lowest validation loss
+            if epoch == 0 or loss < np.amin(loss_over_epochs['validation']):
+                self.save()
+
+            loss_over_epochs['validation'].append(loss)
+            acc_over_epochs['validation'].append(acc)
+
+            # early stopping
+            if epoch >= 2 and non_decreasing(loss_over_epochs['validation'][-3:]):
+                print('Three consecutive iterations with increase in validation loss')
+                self.save(final=True)
+                break
+
+            self.save(final=True)
+
+        print('Plotting learning curves')
+        self.plot_curves(loss_over_epochs, metric='loss')
+        self.plot_curves(acc_over_epochs, metric='accuracy')
 
     def loss_and_acc(self, dataloader,
                      optimizer=None,
@@ -343,3 +374,14 @@ class VoiceModel(nn.Module):
             dim=1)
         central_metas = tensor_metadata[:, self.main_voice_index, time_index_ticks, :]
         return left_metas, central_metas, right_metas
+
+    def plot_curves(self, data, metric='loss'):
+        plt.figure()
+        for key in data:
+            plt.plot(range(1, len(data[key]) + 1), data[key], label=key)
+        plt.xlabel('epoch')
+        plt.ylabel(metric)
+        plt.title('Learning curves')
+        plt.legend()
+        ensure_dir(f'plots/{self.model_id}')
+        plt.savefig(f'plots/{self.model_id}/{self.main_voice_index}_{metric}_learning_curves.png')
