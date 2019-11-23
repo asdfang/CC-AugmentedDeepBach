@@ -70,12 +70,11 @@ def main(note_embedding_dim,
     print('step 2/5: load pre-existing dataset or generate new dataset')
     bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales',
                                                                         **chorale_dataset_kwargs)
-    return
 
     dataset = bach_chorales_dataset
 
-    train_dataloader, val_dataloader, test_dataloader = bach_chorales_dataset.data_loaders(batch_size=128,
-                                                                                           split=(0.85, 0.10))
+    train_dataloader, val_dataloader, test_dataloader = dataset.data_loaders(batch_size=128,
+                                                                             split=(0.85, 0.10))
     print('Num Train Batches: ', len(train_dataloader))
     print('Num Valid Batches: ', len(val_dataloader))
     print('Num Test Batches: ', len(test_dataloader))

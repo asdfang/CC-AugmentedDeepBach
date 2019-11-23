@@ -383,5 +383,7 @@ class VoiceModel(nn.Module):
         plt.ylabel(metric)
         plt.title('Learning curves')
         plt.legend()
+
         ensure_dir(f'plots/{self.model_id}')
         plt.savefig(f'plots/{self.model_id}/{self.main_voice_index}_{metric}_learning_curves.png')
+        plt.savefig(f'plots/{self.main_voice_index}_{metric}_learning_curves.png')
