@@ -218,54 +218,54 @@ class VoiceModel(nn.Module):
                f')'
 
     def train_model(self,
-                    batch_size=16,
-                    num_epochs=10,
+                    batch_size=None,
+                    num_epochs=None,
+                    split=None,
                     optimizer=None):
 
-        loss_over_epochs, acc_over_epochs = read_train_log(self.model_id)
+        loss_over_epochs = {'training': [], 'validation': []}
+        acc_over_epochs = {'training': [], 'validation': []}
 
-        # loss_over_epochs = {'training': [], 'validation': []}
-        # acc_over_epochs = {'training': [], 'validation': []}
-        #
-        # for epoch in range(num_epochs):
-        #     print(f'===Epoch {epoch}===')
-        #     (dataloader_train,
-        #      dataloader_val,
-        #      dataloader_test) = self.dataset.data_loaders(
-        #         batch_size=batch_size,
-        #     )
-        #
-        #     loss, acc = self.loss_and_acc(dataloader_train,
-        #                                   optimizer=optimizer,
-        #                                   phase='train')
-        #
-        #     print(f'Training loss: {loss}')
-        #     print(f'Training accuracy: {acc}')
-        #
-        #     loss_over_epochs['training'].append(loss)
-        #     acc_over_epochs['training'].append(acc)
-        #
-        #     loss, acc = self.loss_and_acc(dataloader_val,
-        #                                   optimizer=None,
-        #                                   phase='test')
-        #
-        #     print(f'Validation loss: {loss}')
-        #     print(f'Validation accuracy: {acc}')
-        #
-        #     # update model with lowest validation loss
-        #     if epoch == 0 or loss < np.amin(loss_over_epochs['validation']):
-        #         self.save()
-        #
-        #     loss_over_epochs['validation'].append(loss)
-        #     acc_over_epochs['validation'].append(acc)
-        #
-        #     # early stopping
-        #     if epoch >= 2 and non_decreasing(loss_over_epochs['validation'][-3:]):
-        #         print('Three consecutive iterations with increase in validation loss')
-        #         self.save(final=True)
-        #         break
-        #
-        #     self.save(final=True)
+        for epoch in range(num_epochs):
+            print(f'===Epoch {epoch}===')
+            (dataloader_train,
+             dataloader_val,
+             dataloader_test) = self.dataset.data_loaders(
+                batch_size=batch_size,
+                split=split,
+            )
+
+            loss, acc = self.loss_and_acc(dataloader_train,
+                                          optimizer=optimizer,
+                                          phase='train')
+
+            print(f'Training loss: {loss}')
+            print(f'Training accuracy: {acc}')
+
+            loss_over_epochs['training'].append(loss)
+            acc_over_epochs['training'].append(acc)
+
+            loss, acc = self.loss_and_acc(dataloader_val,
+                                          optimizer=None,
+                                          phase='test')
+
+            print(f'Validation loss: {loss}')
+            print(f'Validation accuracy: {acc}')
+
+            # update model with lowest validation loss
+            if epoch == 0 or loss < np.amin(loss_over_epochs['validation']):
+                self.save()
+
+            loss_over_epochs['validation'].append(loss)
+            acc_over_epochs['validation'].append(acc)
+
+            # early stopping
+            if epoch >= 2 and non_decreasing(loss_over_epochs['validation'][-3:]):
+                print('Three consecutive iterations with increase in validation loss')
+                self.save(final=True)
+                break
+
+            self.save(final=True)
 
         print('Plotting learning curves')
         self.plot_curves(loss_over_epochs, metric='loss')

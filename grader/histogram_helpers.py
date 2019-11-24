@@ -33,21 +33,3 @@ def normalize_histogram(counter):
 
     return counter
 
-
-def plot_distributions(dict):
-    """
-    Arguments
-        dict: dictionary of score list
-
-    plots many distributions on one graph, to visualize relationship between distributions
-    """
-    for key in dict:
-        plt.hist(dict[key], label=key)
-
-    plt.xlabel('Score')
-    plt.ylabel('Frequency')
-    plt.legend()
-    plt.savefig('plots/score_distribution.png')
-
-    with open('data/score_dict.txt', 'w') as fo:
-        print(dict, file=fo)

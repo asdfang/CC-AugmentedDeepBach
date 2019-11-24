@@ -173,7 +173,6 @@ class DeepBach:
         # randomize regenerated part
         if random_init:
             a, b = time_index_range_ticks
-            print(self.dataset.random_score_tensor(b - a).shape)
             tensor_chorale[:, a:b] = self.dataset.random_score_tensor(b - a)
 
         tensor_chorale = self.parallel_gibbs(
