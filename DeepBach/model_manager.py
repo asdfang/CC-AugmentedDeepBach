@@ -225,8 +225,8 @@ class DeepBach:
         tensor_metadata = tensor_metadata.unsqueeze(0)
 
         # to variable
-        tensor_chorale = cuda_variable(tensor_chorale, volatile=True)
-        tensor_metadata = cuda_variable(tensor_metadata, volatile=True)
+        tensor_chorale = cuda_variable(tensor_chorale)
+        tensor_metadata = cuda_variable(tensor_metadata)
 
         min_temperature = temperature
         temperature = 1.1
@@ -306,7 +306,6 @@ class DeepBach:
                         time_indexes_ticks[voice_index][batch_index]
                     ] = int(pitch)
 
-            tensor_chorale = cuda_variable(tensor_chorale_no_cuda.clone(),
-                                           volatile=True)
+            tensor_chorale = cuda_variable(tensor_chorale_no_cuda.clone())
 
         return tensor_chorale_no_cuda[0, :, timesteps_ticks:-timesteps_ticks]

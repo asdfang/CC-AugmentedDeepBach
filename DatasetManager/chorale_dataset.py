@@ -23,6 +23,9 @@ class ChoraleDataset(MusicDataset):
                  corpus_it_gen,
                  name,
                  voice_ids,
+                 index2note_dicts=None,
+                 note2index_dicts=None,
+                 voice_ranges=None,
                  metadatas=None,
                  sequences_size=8,
                  subdivision=4,
@@ -42,10 +45,10 @@ class ChoraleDataset(MusicDataset):
         self.num_voices = len(voice_ids)
         self.name = name
         self.sequences_size = sequences_size
-        self.index2note_dicts = None
-        self.note2index_dicts = None
+        self.index2note_dicts = index2note_dicts
+        self.note2index_dicts = note2index_dicts
         self.corpus_it_gen = corpus_it_gen
-        self.voice_ranges = None  # in midi pitch
+        self.voice_ranges = voice_ranges
         self.metadatas = metadatas
         self.subdivision = subdivision
         self.histograms = None
@@ -71,16 +74,21 @@ class ChoraleDataset(MusicDataset):
 
         print('Making tensor dataset')
 
-        self.compute_index_dicts()
-        self.compute_voice_ranges()
+        # use index dicts and voice ranges from base dataset, if provided
+        if self.index2note_dicts is None or self.note2index_dicts is None:
+            self.compute_index_dicts()
+        if self.voice_ranges is None:
+            self.compute_voice_ranges()
+
         one_tick = 1 / self.subdivision
         chorale_tensor_dataset = []
         metadata_tensor_dataset = []
+
         for chorale_id, chorale in tqdm(enumerate(self.iterator_gen())):
             # precompute all possible transpositions and corresponding metadatas
             chorale_transpositions = {}
             metadatas_transpositions = {}
-
+            
             # for every 16th-note offset in the chorale
             for offsetStart in np.arange(
                     chorale.flat.lowestOffset - (self.sequences_size - one_tick),
@@ -143,7 +151,6 @@ class ChoraleDataset(MusicDataset):
 
         print(f'Sizes: {chorale_tensor_dataset.size()}, {metadata_tensor_dataset.size()}')
         return dataset
-
 
     def transposed_score_and_metadata_tensors(self, score, semi_tone):
         """
@@ -388,7 +395,6 @@ class ChoraleDataset(MusicDataset):
         # We only consider 4-part chorales
         if not len(chorale.parts) == 4:
             return False
-        # todo contains chord
         return True
 
     def compute_voice_ranges(self):

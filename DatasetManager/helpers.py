@@ -1,5 +1,5 @@
 import music21
-from itertools import islice
+from itertools import islice, tee
 
 from music21 import note, harmony, expressions
 
@@ -78,4 +78,13 @@ class ShortChoraleIteratorGen:
             for chorale in
             islice(music21.corpus.chorales.Iterator(), 3)
         )
+        return it.__iter__()
+
+
+class GeneratedChoraleIteratorGen:
+    def __init__(self, picked_chorales):
+        self.picked_chorales = picked_chorales
+
+    def __call__(self):
+        it = iter(self.picked_chorales)
         return it.__iter__()

@@ -221,7 +221,8 @@ class VoiceModel(nn.Module):
                     batch_size=None,
                     num_epochs=None,
                     split=None,
-                    optimizer=None):
+                    optimizer=None,
+                    early_stopping=True):
 
         loss_over_epochs = {'training': [], 'validation': []}
         acc_over_epochs = {'training': [], 'validation': []}
@@ -260,7 +261,7 @@ class VoiceModel(nn.Module):
             acc_over_epochs['validation'].append(acc)
 
             # early stopping
-            if epoch >= 2 and non_decreasing(loss_over_epochs['validation'][-3:]):
+            if early_stopping and epoch >= 2 and non_decreasing(loss_over_epochs['validation'][-3:]):
                 print('Three consecutive iterations with increase in validation loss')
                 self.save(final=True)
                 break

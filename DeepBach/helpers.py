@@ -7,11 +7,11 @@ from torch.autograd import Variable
 import re, os
 
 
-def cuda_variable(tensor, volatile=False):
+def cuda_variable(tensor):
     if torch.cuda.is_available():
-        return Variable(tensor.cuda(), volatile=volatile)
+        return Variable(tensor.cuda())
     else:
-        return Variable(tensor, volatile=volatile)
+        return Variable(tensor)
 
 
 def to_numpy(variable: Variable):
@@ -21,15 +21,12 @@ def to_numpy(variable: Variable):
         return variable.data.numpy()
 
 
-def init_hidden(num_layers, batch_size, lstm_hidden_size,
-                volatile=False):
+def init_hidden(num_layers, batch_size, lstm_hidden_size):
     hidden = (
         cuda_variable(
-            torch.randn(num_layers, batch_size, lstm_hidden_size),
-            volatile=volatile),
+            torch.randn(num_layers, batch_size, lstm_hidden_size)),
         cuda_variable(
-            torch.randn(num_layers, batch_size, lstm_hidden_size),
-            volatile=volatile)
+            torch.randn(num_layers, batch_size, lstm_hidden_size))
     )
     return hidden
 
