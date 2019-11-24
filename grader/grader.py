@@ -4,6 +4,9 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
+# TODO: for each method, make it so that if we see something in a generated chorale
+# that we haven't seen in the ground truth datasets
+# add a zero for the ground truth dataset for that Counter key
 
 def score_chorale(chorale, dataset, weights=None):
     """
@@ -68,6 +71,10 @@ def get_rhythm_score(chorale, dataset):
 
     return wasserstein_distance(chorale_list, dataset_list)
 
+
+# TODO: method for interval histograms
+def get_interval_score(chorale, dataset, directed=True):
+    pass
 
 def plot_distributions(chorale_file, generation_file):
     """
