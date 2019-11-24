@@ -1,8 +1,16 @@
 from collections import Counter
-import matplotlib.pyplot as plt
 
 
 def get_note_histogram(chorale, key):
+    """
+    Arguments
+        chorale: a music21 Stream object
+        key: music21.key.Key
+
+    Returns a note histogram as collections.Counter object for input chorale
+        Counter key: (scale degree, accidental) or 'Rest'
+        Counter value: count
+    """
     nh = Counter()
     for note_or_rest in chorale.flat.notesAndRests:
         if note_or_rest.isNote:
@@ -14,6 +22,15 @@ def get_note_histogram(chorale, key):
 
 
 def get_rhythm_histogram(chorale):
+    """
+    Arguments
+        chorale: a music21 Stream object
+
+    Returns a rhythm histogram as collections.Counter object for input chorale
+        Counter key: float or 'Rest', notating a rhythm in terms of a quarter-note's length
+            (i.e. 1.0: quarter-note, 0.5: eighth note, 2.0: half note, etc.)
+        Counter value: count
+    """
     rh = Counter()
     for note_or_rest in chorale.flat.notesAndRests:
         rh[note_or_rest.duration.quarterLength] += 1
@@ -21,12 +38,19 @@ def get_rhythm_histogram(chorale):
 
 
 def get_interval_histogram(chorale):
+    # TODO: finish and document this method
     ih = Counter()
     chorale.parts[0].melodicIntervals().show('txt')
     chorale.show()
 
 
 def normalize_histogram(counter):
+    """
+    Arguments
+        counter: collections.Counter
+
+    Returns a normalized collections.Counter
+    """
     total = sum(counter.values(), 0.0)
     for key in counter:
         counter[key] /= total
