@@ -1,4 +1,3 @@
-import click
 from grader.histogram_helpers import *
 from scipy.stats import wasserstein_distance
 import csv
@@ -7,7 +6,7 @@ import csv
 def score_chorale(chorale, dataset):
     """
     Arguments
-        chorale: a music21 Stream object
+        chorale: music21.stream.Stream
         dataset: a ChoraleDataset object
 
     return score
@@ -20,6 +19,13 @@ def score_chorale(chorale, dataset):
 
 
 def get_note_score(chorale, dataset):
+    """
+    Arguments
+        chorale: music21.stream.Stream
+        dataset: a ChoraleDataset object
+
+    Returns Wasserstein distance between normalized chorale note distribution and normalized dataset note distribution
+    """
     key = chorale.analyze('key')
     chorale_histogram = normalize_histogram(get_note_histogram(chorale, key))
 
@@ -35,6 +41,13 @@ def get_note_score(chorale, dataset):
 
 
 def get_rhythm_score(chorale, dataset):
+    """
+    Arguments
+        chorale: music21.stream.Stream
+        dataset: a ChoraleDataset object
+
+    Returns Wasserstein distance between normalized chorale rhythm distribution and normalized dataset rhythm distribution
+    """
     chorale_histogram = normalize_histogram(get_rhythm_histogram(chorale))
     dataset_histogram = dataset.histograms['rhythm_histogram']
 
