@@ -38,16 +38,8 @@ def get_rhythm_histogram(chorale):
 
     return rh
 
+
 # TODO: incorporate this into grader.py, chorale_datasets.py
-# import music21
-# from tqdm import tqdm
-# all_directed_ih = Counter()
-# all_undirected_ih = Counter()
-# for chorale in tqdm(music21.corpus.chorales.Iterator(1,371)):
-#     if len(chorale.parts) == 4:
-#         r1, r2 = get_interval_histogram(chorale)
-#         all_directed_ih += r1
-#         all_undirected_ih += r2
 def get_interval_histogram(chorale):
     """
     Arguments

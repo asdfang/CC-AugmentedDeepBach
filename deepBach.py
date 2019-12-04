@@ -52,6 +52,8 @@ import pickle
               help='number of iterations of generating chorales, scoring, and updating trained model')
 @click.option('--num_generations', default=2,
               help='number of chorales to generate at each iteration')
+@click.option('--include_transpositions', is_flag=True,
+              help='whether to include transpositions (for dataset creation, or for pointing to the right folder at generation time)')
 def main(note_embedding_dim,
          meta_embedding_dim,
          num_layers,
@@ -67,6 +69,7 @@ def main(note_embedding_dim,
          model_id,
          update_iterations,
          num_generations,
+         include_transpositions,
          ):
     print(f'Model ID: {model_id}')
 
@@ -82,15 +85,17 @@ def main(note_embedding_dim,
         'voice_ids':      [0, 1, 2, 3],
         'metadatas':      metadatas,
         'sequences_size': 8,
-        'subdivision':    4
+        'subdivision':    4,
+        'include_transpositions': include_transpositions,
     }
 
     print('step 2/5: load pre-existing dataset or generate new dataset')
-    bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales', **chorale_dataset_kwargs)
+    bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales',
+                                                                        **chorale_dataset_kwargs)
     dataset = bach_chorales_dataset
-
     histograms_file = 'grader/bach_histograms.txt'
     if os.path.exists(histograms_file):
+        print('Loading Bach chorale histograms')
         with open(histograms_file, 'rb') as fin:
             dataset.histograms = pickle.load(fin)
     else:
@@ -114,7 +119,12 @@ def main(note_embedding_dim,
         print('step 4/5: train base model')
         deepbach.train(batch_size=batch_size,
                        num_epochs=num_epochs)
-    elif update:
+    else:
+        print('step 4/5: load model')
+        deepbach.load()
+        deepbach.cuda()
+
+    if update:
         print(f'step 4/5: update base model over {update_iterations} iterations')
         for i in range(update_iterations):
             print(f'Iteration {i}')
@@ -144,21 +154,16 @@ def main(note_embedding_dim,
             deepbach.dataset = generated_dataset
             deepbach.train(batch_size=batch_size,
                            num_epochs=2,
-                           split=[0.98, 0.01],
+                           split=[1, 0],                # use all selected chorales for training
                            early_stopping=False)
-    else:
-        print('step 4/5: load model')
-        deepbach.load()
-        deepbach.cuda()
-
 
     # generate chorales
     print('step 5/5: score chorales')
     # chorale_scores = {}
     generation_scores = {}
-    gen_count = 1
+    gen_count = 20
 
-    print('Scoring real chorales')
+    # print('Scoring real chorales')
     # smaller_iterator = islice(dataset.iterator_gen(), gen_count)
     # for chorale_id, chorale in tqdm(enumerate(smaller_iterator)):
     #     score, scores = score_chorale(chorale, dataset)

@@ -225,8 +225,8 @@ class DeepBach:
         tensor_metadata = tensor_metadata.unsqueeze(0)
 
         # to variable
-        tensor_chorale = cuda_variable(tensor_chorale)
-        tensor_metadata = cuda_variable(tensor_metadata)
+        tensor_chorale = cuda_variable(tensor_chorale, volatile=True)
+        tensor_metadata = cuda_variable(tensor_metadata, volatile=True)
 
         min_temperature = temperature
         temperature = 1.1
@@ -250,23 +250,14 @@ class DeepBach:
                         *time_index_range_ticks)
                     time_indexes_ticks[voice_index].append(time_index_ticks)
 
-                    notes, label = (self.voice_models[voice_index]
-                                    .preprocess_notes(
-                            tensor_chorale=tensor_chorale[
-                                           :, :,
-                                           time_index_ticks - timesteps_ticks:
-                                           time_index_ticks + timesteps_ticks],
-                            time_index_ticks=timesteps_ticks
-                        )
-                    )
-                    metas = self.voice_models[voice_index].preprocess_metas(
-                        tensor_metadata=tensor_metadata[
-                                        :, :,
-                                        time_index_ticks - timesteps_ticks:
-                                        time_index_ticks + timesteps_ticks,
-                                        :],
-                        time_index_ticks=timesteps_ticks
-                    )
+                    notes, label = (self.voice_models[voice_index].preprocess_notes(tensor_chorale=tensor_chorale[:, :,
+                                                                                                   time_index_ticks - timesteps_ticks:
+                                                                                                   time_index_ticks + timesteps_ticks],
+                                                                                    time_index_ticks=timesteps_ticks))
+                    metas = self.voice_models[voice_index].preprocess_metas(tensor_metadata=tensor_metadata[:, :,
+                                                                                            time_index_ticks - timesteps_ticks:
+                                                                                            time_index_ticks + timesteps_ticks, :],
+                                                                            time_index_ticks=timesteps_ticks)
 
                     batch_notes.append(notes)
                     batch_metas.append(metas)
@@ -306,6 +297,6 @@ class DeepBach:
                         time_indexes_ticks[voice_index][batch_index]
                     ] = int(pitch)
 
-            tensor_chorale = cuda_variable(tensor_chorale_no_cuda.clone())
+            tensor_chorale = cuda_variable(tensor_chorale_no_cuda.clone(), volatile=True)
 
         return tensor_chorale_no_cuda[0, :, timesteps_ticks:-timesteps_ticks]

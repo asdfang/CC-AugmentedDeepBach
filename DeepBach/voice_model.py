@@ -117,6 +117,7 @@ class VoiceModel(nn.Module):
             batch_size=batch_size,
             lstm_hidden_size=self.lstm_hidden_size,
         )
+
         left, hidden = self.lstm_left(left, hidden)
         left = left[:, -1, :]
 
@@ -240,11 +241,17 @@ class VoiceModel(nn.Module):
                                           optimizer=optimizer,
                                           phase='train')
 
+            self.save(final=True)
+
             print(f'Training loss: {loss}')
             print(f'Training accuracy: {acc}')
 
             loss_over_epochs['training'].append(loss)
             acc_over_epochs['training'].append(acc)
+
+            # only continue if there is validation data
+            if dataloader_val is None:
+                continue
 
             loss, acc = self.loss_and_acc(dataloader_val,
                                           optimizer=None,
@@ -263,10 +270,7 @@ class VoiceModel(nn.Module):
             # early stopping
             if early_stopping and epoch >= 2 and non_decreasing(loss_over_epochs['validation'][-3:]):
                 print('Three consecutive iterations with increase in validation loss')
-                self.save(final=True)
                 break
-
-            self.save(final=True)
 
         print('Plotting learning curves')
         self.plot_curves(loss_over_epochs, metric='loss')

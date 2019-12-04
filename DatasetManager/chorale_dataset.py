@@ -29,7 +29,8 @@ class ChoraleDataset(MusicDataset):
                  metadatas=None,
                  sequences_size=8,
                  subdivision=4,
-                 cache_dir=None):
+                 cache_dir=None,
+                 include_transpositions=False):
         """
         :param corpus_it_gen: calling this function returns an iterator
         over chorales (as music21 scores)
@@ -40,7 +41,7 @@ class ChoraleDataset(MusicDataset):
         :param subdivision: number of sixteenth notes per beat
         :param cache_dir: directory where tensor_dataset is stored
         """
-        super(ChoraleDataset, self).__init__(cache_dir=cache_dir)
+        super(ChoraleDataset, self).__init__(cache_dir=cache_dir, include_transpositions=include_transpositions)
         self.voice_ids = voice_ids
         self.num_voices = len(voice_ids)
         self.name = name
@@ -536,7 +537,9 @@ class ChoraleDataset(MusicDataset):
         print('Calculating ground-truth histograms over Bach chorales')
         major_nh = collections.Counter()
         minor_nh = collections.Counter()
-        all_rh = collections.Counter()
+        rh = collections.Counter()
+        directed_ih = Counter()
+        undirected_ih = Counter()
         # all_ih = collections.Counter()
         for chorale in tqdm(self.iterator_gen()):
             # note histograms
@@ -548,14 +551,18 @@ class ChoraleDataset(MusicDataset):
                 minor_nh += chorale_nh
 
             # rhythm histogram
-            all_rh += get_rhythm_histogram(chorale)
+            rh += get_rhythm_histogram(chorale)
 
             # interval histogram
-            # all_ih += chorale_interval_histogram(chorale)
+            r1, r2 = get_interval_histogram(chorale)
+            directed_ih += r1
+            undirected_ih += r2
 
         histograms = {'major_note_histogram': major_nh,
                       'minor_note_histogram': minor_nh,
-                      'rhythm_histogram': all_rh}
+                      'rhythm_histogram': rh,
+                      'directed_interval_histogram': directed_ih,
+                      'undirected_ih': undirected_ih}
 
         # normalize by count total
         for hist in histograms:
