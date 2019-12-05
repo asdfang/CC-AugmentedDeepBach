@@ -48,12 +48,14 @@ import pickle
               help='length of the generated chorale (in ticks)')
 @click.option('--model_id', default=0,
               help='ID of the model to train and generate from')
-@click.option('--update_iterations', default=2,
-              help='number of iterations of generating chorales, scoring, and updating trained model')
-@click.option('--num_generations', default=2,
-              help='number of chorales to generate at each iteration')
 @click.option('--include_transpositions', is_flag=True,
               help='whether to include transpositions (for dataset creation, or for pointing to the right folder at generation time)')
+@click.option('--update_iterations', default=2,
+              help='number of iterations of generating chorales, scoring, and updating trained model')
+@click.option('--generations_per_iteration', default=2,
+              help='number of chorales to generate at each iteration')
+@click.option('--num_generations', default=5,
+              help='number of generations for scoring')
 def main(note_embedding_dim,
          meta_embedding_dim,
          num_layers,
@@ -67,9 +69,10 @@ def main(note_embedding_dim,
          num_iterations,
          sequence_length_ticks,
          model_id,
-         update_iterations,
-         num_generations,
          include_transpositions,
+         update_iterations,
+         generations_per_iteration,
+         num_generations,
          ):
     print(f'Model ID: {model_id}')
 
@@ -77,15 +80,15 @@ def main(note_embedding_dim,
 
     print('step 1/5: initialize empty metadata')
     metadatas = [
-       FermataMetadata(),
-       TickMetadata(subdivision=4),
-       KeyMetadata()
+        FermataMetadata(),
+        TickMetadata(subdivision=4),
+        KeyMetadata()
     ]
     chorale_dataset_kwargs = {
-        'voice_ids':      [0, 1, 2, 3],
-        'metadatas':      metadatas,
+        'voice_ids': [0, 1, 2, 3],
+        'metadatas': metadatas,
         'sequences_size': 8,
-        'subdivision':    4,
+        'subdivision': 4,
         'include_transpositions': include_transpositions,
     }
 
@@ -130,13 +133,14 @@ def main(note_embedding_dim,
             print(f'Iteration {i}')
             picked_chorales = []
             num_picked_chorales = 0
-            for j in tqdm(range(num_generations)):
+            for j in tqdm(range(generations_per_iteration)):
                 chorale, tensor_chorale, tensor_metadata = deepbach.generation(
                     num_iterations=num_iterations,
                     sequence_length_ticks=sequence_length_ticks,
                 )
 
                 score, scores = score_chorale(chorale, dataset)
+                # TODO: pick threshold, and also maybe weight the example by the score
                 if score < 0.5:
                     picked_chorales.append(chorale)
                     num_picked_chorales += 1
@@ -154,40 +158,38 @@ def main(note_embedding_dim,
             deepbach.dataset = generated_dataset
             deepbach.train(batch_size=batch_size,
                            num_epochs=2,
-                           split=[1, 0],                # use all selected chorales for training
+                           split=[1, 0],  # use all selected chorales for training
                            early_stopping=False)
 
     # generate chorales
     print('step 5/5: score chorales')
-    # chorale_scores = {}
+    chorale_scores = {}
     generation_scores = {}
-    gen_count = 20
 
-    # print('Scoring real chorales')
-    # smaller_iterator = islice(dataset.iterator_gen(), gen_count)
-    # for chorale_id, chorale in tqdm(enumerate(smaller_iterator)):
-    #     score, scores = score_chorale(chorale, dataset)
-    #     chorale_scores[chorale_id] = (*scores, score)
+    print('Scoring real chorales')
+    smaller_iterator = islice(dataset.iterator_gen(), num_generations)
+    for chorale_id, chorale in tqdm(enumerate(smaller_iterator)):
+        score, scores = score_chorale(chorale, dataset)
+        chorale_scores[chorale_id] = (*scores, score)
 
     print('Generating and scoring generated chorales')
     ensure_dir(f'generations/{model_id}')
-    for i in tqdm(range(gen_count)):
+    for i in tqdm(range(num_generations)):
         chorale, tensor_chorale, tensor_metadata = deepbach.generation(
             num_iterations=num_iterations,
             sequence_length_ticks=sequence_length_ticks,
         )
-        chorale.write('midi',  f'generations/{model_id}/c{i}.mid')
+        chorale.write('midi', f'generations/{model_id}/c{i}.mid')
         score, scores = score_chorale(chorale, dataset)
         generation_scores[i] = (*scores, score)
 
-    # threshold = np.mean([value[-1] for value in generation_scores])
+    # write scores to file
+    with open('data/chorale_tmp.csv', 'w') as chorale_file:
+        reader = csv.writer(chorale_file)
+        for key, value in chorale_scores.items():
+            reader.writerow([key, *value])
 
-    # with open('data/chorale_scores.csv', 'w') as chorale_file:
-    #     reader = csv.writer(chorale_file)
-    #     for key, value in chorale_scores.items():
-    #         reader.writerow([key, *value])
-
-    with open('data/generation_scores.csv', 'w') as generation_file:
+    with open('data/generation_tmp.csv', 'w') as generation_file:
         reader = csv.writer(generation_file)
         for key, value in generation_scores.items():
             reader.writerow([key, *value])
