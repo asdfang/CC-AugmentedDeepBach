@@ -4,10 +4,6 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
-# TODO: for each method, make it so that if we see something in a generated chorale
-# that we haven't seen in the ground truth datasets
-# add a zero for the ground truth dataset for that Counter key
-
 
 def score_chorale(chorale, dataset, weights=None):
     """
@@ -45,9 +41,8 @@ def get_note_score(chorale, dataset):
     else:
         dataset_histogram = dataset.histograms['minor_note_histogram']
 
-    # TODO for the cutest boy in the world: fix this so that the list order is not arbitrary
-    chorale_list = [chorale_histogram[key] for key in dataset_histogram]
-    dataset_list = [dataset_histogram[key] for key in dataset_histogram]
+    chorale_list, dataset_list = get_ordered_histograms(chorale_histogram, dataset_histogram)
+
     return wasserstein_distance(chorale_list, dataset_list)
 
 
@@ -62,14 +57,11 @@ def get_rhythm_score(chorale, dataset):
     chorale_histogram = normalize_histogram(get_rhythm_histogram(chorale))
     dataset_histogram = dataset.histograms['rhythm_histogram']
 
-    # TODO: fix this also
-    chorale_list = [chorale_histogram[key] for key in dataset_histogram]
-    dataset_list = [dataset_histogram[key] for key in dataset_histogram]
+    chorale_list, dataset_list = get_ordered_histograms(chorale_histogram, dataset_histogram)
 
     return wasserstein_distance(chorale_list, dataset_list)
 
 
-# TODO: method for interval histograms
 def get_interval_score(chorale, dataset, directed=True):
     directed_ih, undirected_ih = normalize_histogram(get_interval_histogram(chorale))
 
@@ -77,8 +69,7 @@ def get_interval_score(chorale, dataset, directed=True):
     key = 'directed_interval_histogram' if directed else 'undirected_interval_histogram'
     dataset_histogram = dataset.histograms[key]
 
-    chorale_list = [chorale_histogram[key] for key in dataset_histogram]
-    dataset_list = [dataset_histogram[key] for key in dataset_histogram]
+    chorale_list, dataset_list = get_ordered_histograms(chorale_histogram, dataset_histogram)
 
     return wasserstein_distance(chorale_list, dataset_list)
 
