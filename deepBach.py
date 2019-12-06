@@ -14,7 +14,7 @@ from DeepBach.model_manager import DeepBach
 from DeepBach.helpers import *
 from grader.grader import score_chorale
 from tqdm import tqdm
-from grader.grader import plot_distributions
+from grader.histogram_helpers import plot_distributions
 from itertools import chain, islice
 import music21
 import numpy as np
@@ -78,7 +78,7 @@ def main(note_embedding_dim,
 
     dataset_manager = DatasetManager()
 
-    print('step 1/5: initialize empty metadata')
+    print('step 1/3: prepare dataset')
     metadatas = [
         FermataMetadata(),
         TickMetadata(subdivision=4),
@@ -92,7 +92,6 @@ def main(note_embedding_dim,
         'include_transpositions': include_transpositions,
     }
 
-    print('step 2/5: load pre-existing dataset or generate new dataset')
     bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales',
                                                                         **chorale_dataset_kwargs)
     dataset = bach_chorales_dataset
@@ -106,7 +105,7 @@ def main(note_embedding_dim,
         with open(histograms_file, 'wb') as fo:
             pickle.dump(dataset.histograms, fo)
 
-    print('step 3/5: create model architecture')
+    print('step 2/3: prepare model')
     deepbach = DeepBach(
         dataset=dataset,
         note_embedding_dim=note_embedding_dim,
@@ -119,16 +118,16 @@ def main(note_embedding_dim,
     )
 
     if train:
-        print('step 4/5: train base model')
+        print('step 2a/3: train base model')
         deepbach.train(batch_size=batch_size,
                        num_epochs=num_epochs)
     else:
-        print('step 4/5: load model')
+        print('step 2a/3: load model')
         deepbach.load()
         deepbach.cuda()
 
     if update:
-        print(f'step 4/5: update base model over {update_iterations} iterations')
+        print(f'step 2b/3: update base model over {update_iterations} iterations')
         for i in range(update_iterations):
             print(f'Iteration {i}')
             picked_chorales = []
@@ -162,7 +161,7 @@ def main(note_embedding_dim,
                            early_stopping=False)
 
     # generate chorales
-    print('step 5/5: score chorales')
+    print('step 3/3: score chorales')
     chorale_scores = {}
     generation_scores = {}
 
@@ -194,7 +193,7 @@ def main(note_embedding_dim,
         for key, value in generation_scores.items():
             reader.writerow([key, *value])
 
-    plot_distributions('data/chorale_scores.csv', 'data/generation_scores.csv')
+    plot_distributions('data/chorale_tmp.csv', 'data/generation_tmp.csv')
 
 
 if __name__ == '__main__':

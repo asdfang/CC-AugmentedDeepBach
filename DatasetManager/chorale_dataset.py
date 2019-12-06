@@ -11,6 +11,7 @@ from DatasetManager.helpers import standard_name, SLUR_SYMBOL, START_SYMBOL, END
     standard_note, OUT_OF_RANGE, REST_SYMBOL
 from DatasetManager.metadata import FermataMetadata
 from DatasetManager.music_dataset import MusicDataset
+from grader.get_chorale_histograms import *
 from grader.histogram_helpers import *
 
 
@@ -535,12 +536,13 @@ class ChoraleDataset(MusicDataset):
 
     def calculate_histograms(self):
         print('Calculating ground-truth histograms over Bach chorales')
-        major_nh = collections.Counter()
-        minor_nh = collections.Counter()
-        rh = collections.Counter()
-        directed_ih = Counter()
-        undirected_ih = Counter()
-        # all_ih = collections.Counter()
+        major_nh = collections.Counter()        # notes (for chorales in major)
+        minor_nh = collections.Counter()        # notes (for chorales in minor)
+        rh = collections.Counter()              # rhythm
+        directed_ih = Counter()                 # directed intervals
+        undirected_ih = Counter()               # undirected intervals
+        eh = Counter()                          # errors
+
         for chorale in tqdm(self.iterator_gen()):
             # note histograms
             key = chorale.analyze('key')
@@ -558,11 +560,15 @@ class ChoraleDataset(MusicDataset):
             directed_ih += r1
             undirected_ih += r2
 
+            # error histogram
+            eh += get_error_histogram(chorale, self.voice_ranges)
+
         histograms = {'major_note_histogram': major_nh,
                       'minor_note_histogram': minor_nh,
                       'rhythm_histogram': rh,
                       'directed_interval_histogram': directed_ih,
-                      'undirected_ih': undirected_ih}
+                      'undirected_interval_histogram': undirected_ih,
+                      'error_histogram': eh}
 
         # normalize by count total
         for hist in histograms:
