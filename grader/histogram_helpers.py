@@ -50,7 +50,9 @@ def histogram_to_list(h1, h2):
     return ordered_h1_vals, ordered_h2_vals
 
 
-def plot_distributions(chorale_file, generation_file):
+def plot_distributions(chorale_file=None,
+                       generation_file=None,
+                       out_file=None):
     """
     Arguments
         dict: dictionary of score list
@@ -74,4 +76,4 @@ def plot_distributions(chorale_file, generation_file):
     plt.xlabel('Score')
     plt.ylabel('Frequency')
     plt.legend()
-    plt.savefig('plots/score_distribution.png')
+    plt.savefig(out_file)

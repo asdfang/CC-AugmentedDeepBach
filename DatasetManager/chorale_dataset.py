@@ -11,7 +11,7 @@ from DatasetManager.helpers import standard_name, SLUR_SYMBOL, START_SYMBOL, END
     standard_note, OUT_OF_RANGE, REST_SYMBOL
 from DatasetManager.metadata import FermataMetadata
 from DatasetManager.music_dataset import MusicDataset
-from grader.get_chorale_histograms import *
+from grader.compute_chorale_histograms import *
 from grader.histogram_helpers import *
 
 

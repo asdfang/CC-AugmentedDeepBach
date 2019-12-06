@@ -193,7 +193,9 @@ def main(note_embedding_dim,
         for key, value in generation_scores.items():
             reader.writerow([key, *value])
 
-    plot_distributions('data/chorale_tmp.csv', 'data/generation_tmp.csv')
+    plot_distributions(chorale_file='data/chorale_tmp.csv',
+                       generation_file='data/generation_tmp.csv',
+                       out_file='plots/tmp.png')
 
 
 if __name__ == '__main__':
