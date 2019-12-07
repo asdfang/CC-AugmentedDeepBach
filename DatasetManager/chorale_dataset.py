@@ -54,6 +54,7 @@ class ChoraleDataset(MusicDataset):
         self.metadatas = metadatas
         self.subdivision = subdivision
         self.histograms = None
+        self.error_note_ratio = None
 
     def __repr__(self):
         return f'ChoraleDataset(' \
@@ -542,6 +543,7 @@ class ChoraleDataset(MusicDataset):
         directed_ih = Counter()                 # directed intervals
         undirected_ih = Counter()               # undirected intervals
         eh = Counter()                          # errors
+        num_notes = 0                           # number of notes
 
         for chorale in tqdm(self.iterator_gen()):
             # note histograms
@@ -563,6 +565,12 @@ class ChoraleDataset(MusicDataset):
             # error histogram
             eh += get_error_histogram(chorale, self.voice_ranges)
 
+            # number of notes
+            num_notes += len(chorale.flat.notes)
+
+        # proportion of errors to notes
+        error_note_ratio = np.sum(eh.values()) / num_notes
+
         histograms = {'major_note_histogram': major_nh,
                       'minor_note_histogram': minor_nh,
                       'rhythm_histogram': rh,
@@ -574,5 +582,7 @@ class ChoraleDataset(MusicDataset):
         for hist in histograms:
             histograms[hist] = normalize_histogram(histograms[hist])
 
+        self.error_note_ratio = error_note_ratio
         self.histograms = histograms
+
 

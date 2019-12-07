@@ -5,13 +5,16 @@ score functions for a chorale with reference to a dataset
 from grader.histogram_helpers import *
 from grader.compute_chorale_histograms import *
 from scipy.stats import wasserstein_distance
+import numpy as np
 
 
 def get_error_score(chorale, dataset):
-    chorale_histogram = normalize_histogram(get_error_histogram(chorale, dataset.voice_ranges))
+    num_notes = len(chorale.flat.notes)
+    chorale_histogram = get_error_histogram(chorale, dataset.voice_ranges)
+    num_errors = np.sum(chorale_histogram.values())
     dataset_histogram = dataset.histograms['error_histogram']
-
-    return wasserstein_distance(*histogram_to_list(chorale_histogram, dataset_histogram))
+    error_note_ratio = num_errors / num_notes
+    return wasserstein_distance(*histogram_to_list(chorale_histogram, dataset_histogram)) * (error_note_ratio / dataset.error_note_ratio)
 
 
 def get_note_score(chorale, dataset):
