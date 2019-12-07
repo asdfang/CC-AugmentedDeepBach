@@ -3,6 +3,7 @@ score a chorale compared to a dataset of ground-truth chorales
 """
 
 from grader.get_feature_scores import *
+from collections import defaultdict
 
 
 score_methods_dict = {'error': get_error_score,
@@ -12,7 +13,7 @@ score_methods_dict = {'error': get_error_score,
                       'directed_interval': get_directed_interval_score}
 
 
-def score_chorale(chorale, dataset, features=None):
+def score_chorale(chorale, dataset, weights=None):
     """
     Arguments
         chorale: music21.stream.Stream
@@ -24,17 +25,18 @@ def score_chorale(chorale, dataset, features=None):
 
     assert dataset.histograms is not None
 
-    if not features:
-        features = {feature: 1 for feature in score_methods_dict}
+    if not weights:
+        weights = {feature: 1 for feature in score_methods_dict}
 
-    scores = []
+    scores = defaultdict(int)
     score = 0
 
-    for f in features:
-        score = score_methods_dict[f](chorale, dataset)
-        weight = features[f]
-        scores.append(score)
-        score += weight*score
+    for feature in weights:
+        feature_score = score_methods_dict[feature](chorale, dataset)
+        feature_weight = weights[feature]
+
+        scores[feature] = feature_score
+        score += feature_weight*feature_score
 
     return score, scores
 

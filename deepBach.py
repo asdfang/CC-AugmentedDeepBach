@@ -15,10 +15,14 @@ from DeepBach.helpers import *
 from grader.grader import score_chorale
 from tqdm import tqdm
 from grader.histogram_helpers import plot_distributions
-from itertools import chain, islice
-import music21
-import numpy as np
+from itertools import islice
 import pickle
+
+weights = {'error': 1,
+            'note': 1,
+            'rhythm': 1,
+            'undirected_interval': 1,
+            'directed_interval': 1}
 
 
 @click.command()
@@ -129,7 +133,6 @@ def main(note_embedding_dim,
     if update:
         print(f'step 2b/3: update base model over {update_iterations} iterations')
         for i in range(update_iterations):
-            print(f'Iteration {i}')
             picked_chorales = []
             num_picked_chorales = 0
             for j in tqdm(range(generations_per_iteration)):
@@ -144,7 +147,7 @@ def main(note_embedding_dim,
                     picked_chorales.append(chorale)
                     num_picked_chorales += 1
 
-            print(f'Number of picked chorales: {num_picked_chorales}')
+            print(f'Number of picked chorales for iteration {i}: {num_picked_chorales}')
             all_datasets.update({f'generated_chorales_{i}': {'dataset_class_name': ChoraleDataset,
                                                              'corpus_it_gen': GeneratedChoraleIteratorGen(
                                                                  picked_chorales)}})
@@ -168,8 +171,8 @@ def main(note_embedding_dim,
     print('Scoring real chorales')
     smaller_iterator = islice(dataset.iterator_gen(), num_generations)
     for chorale_id, chorale in tqdm(enumerate(smaller_iterator)):
-        score, scores = score_chorale(chorale, dataset)
-        chorale_scores[chorale_id] = (*scores, score)
+        score, scores = score_chorale(chorale, dataset, weights=weights)
+        chorale_scores[chorale_id] = (score, *[scores[f] for f in weights.keys()])
 
     print('Generating and scoring generated chorales')
     ensure_dir(f'generations/{model_id}')
@@ -179,19 +182,21 @@ def main(note_embedding_dim,
             sequence_length_ticks=sequence_length_ticks,
         )
         chorale.write('midi', f'generations/{model_id}/c{i}.mid')
-        score, scores = score_chorale(chorale, dataset)
-        generation_scores[i] = (*scores, score)
+        score, scores = score_chorale(chorale, dataset, weights=weights)
+        generation_scores[i] = (score, *[scores[f] for f in weights.keys()])
 
     # write scores to file
     with open('data/chorale_tmp.csv', 'w') as chorale_file:
         reader = csv.writer(chorale_file)
-        for key, value in chorale_scores.items():
-            reader.writerow([key, *value])
+        reader.writerow(['', 'score'] + list(weights.keys()))
+        for id, value in chorale_scores.items():
+            reader.writerow([id, *value])
 
     with open('data/generation_tmp.csv', 'w') as generation_file:
         reader = csv.writer(generation_file)
-        for key, value in generation_scores.items():
-            reader.writerow([key, *value])
+        reader.writerow(['', 'score'] + list(weights.keys()))
+        for id, value in generation_scores.items():
+            reader.writerow([id, *value])
 
     plot_distributions(chorale_file='data/chorale_tmp.csv',
                        generation_file='data/generation_tmp.csv',

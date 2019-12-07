@@ -61,15 +61,18 @@ def plot_distributions(chorale_file=None,
     """
     chorale_scores = []
     generation_scores = []
+    col = -1
     with open(chorale_file, 'r') as chorale_file:
         reader = csv.reader(chorale_file)
+        next(reader)
         for row in reader:
-            chorale_scores.append(float(row[1]))
+            chorale_scores.append(float(row[col]))
 
     with open(generation_file, 'r') as generation_file:
         reader = csv.reader(generation_file)
+        next(reader)
         for row in reader:
-            generation_scores.append(float(row[1]))
+            generation_scores.append(float(row[col]))
 
     plt.hist(chorale_scores, label='real chorales', alpha=0.5)
     plt.hist(generation_scores, label='generated chorales', alpha=0.5)
