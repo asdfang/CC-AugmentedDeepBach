@@ -535,6 +535,7 @@ class ChoraleDataset(MusicDataset):
             score.insert(part)
         return score
 
+    # TODO: use dictionary of function names
     def calculate_histograms(self):
         print('Calculating ground-truth histograms over Bach chorales')
         major_nh = collections.Counter()        # notes (for chorales in major)
@@ -569,7 +570,7 @@ class ChoraleDataset(MusicDataset):
             num_notes += len(chorale.flat.notes)
 
         # proportion of errors to notes
-        error_note_ratio = np.sum(eh.values()) / num_notes
+        error_note_ratio = sum(eh.values()) / num_notes
 
         histograms = {'major_note_histogram': major_nh,
                       'minor_note_histogram': minor_nh,

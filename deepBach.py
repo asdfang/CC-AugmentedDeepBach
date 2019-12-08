@@ -100,14 +100,19 @@ def main(note_embedding_dim,
                                                                         **chorale_dataset_kwargs)
     dataset = bach_chorales_dataset
     histograms_file = 'grader/bach_histograms.txt'
-    if os.path.exists(histograms_file):
+    error_note_ratio_file = 'grader/error_note_ratio.txt'
+    if os.path.exists(histograms_file) and os.path.exists(error_note_ratio_file):
         print('Loading Bach chorale histograms')
         with open(histograms_file, 'rb') as fin:
             dataset.histograms = pickle.load(fin)
+        with open(error_note_ratio_file, 'rb') as fin:
+            dataset.error_note_ratio = pickle.load(fin)
     else:
         dataset.calculate_histograms()
         with open(histograms_file, 'wb') as fo:
             pickle.dump(dataset.histograms, fo)
+        with open(error_note_ratio_file, 'wb') as fo:
+            pickle.dump(dataset.error_note_ratio, fo)
 
     print('step 2/3: prepare model')
     deepbach = DeepBach(

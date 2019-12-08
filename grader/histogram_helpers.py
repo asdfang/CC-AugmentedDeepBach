@@ -61,7 +61,7 @@ def plot_distributions(chorale_file=None,
     """
     chorale_scores = []
     generation_scores = []
-    col = -1
+    col = 1
     with open(chorale_file, 'r') as chorale_file:
         reader = csv.reader(chorale_file)
         next(reader)
