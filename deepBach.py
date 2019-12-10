@@ -18,11 +18,18 @@ from grader.histogram_helpers import plot_distributions
 from itertools import islice
 import pickle
 
-weights = {'error': 1,
-            'note': 1,
-            'rhythm': 1,
-            'undirected_interval': 1,
-            'directed_interval': 1}
+# error is not as useful; - .01 - .17                       .170; .5 - .085
+# parallel is useful; 0-.20; 0-2.5                          .200; .15 - .30
+# notes is a little useful – .0025 - .02; .0025 - .02       .020; 5 - .10
+# rhythm is not as useful – 0.005 - .06; 0.005 - 0.06       .060; 1 - .060
+# directed_interval is useful – .002 - .009; .002 - .011    .010; 20 - .20
+# rhythm < error < notes < directed_interval < parallel
+
+weights = {'error': .5,
+           'parallel_error': .15,
+           'note': 5,
+           'rhythm': 1,
+           'directed_interval': 20}
 
 
 @click.command()
@@ -101,18 +108,23 @@ def main(note_embedding_dim,
     dataset = bach_chorales_dataset
     histograms_file = 'grader/bach_histograms.txt'
     error_note_ratio_file = 'grader/error_note_ratio.txt'
-    if os.path.exists(histograms_file) and os.path.exists(error_note_ratio_file):
+    parallel_error_note_ratio_file = 'grader/parallel_error_note_ratio.txt'
+    if os.path.exists(histograms_file) and os.path.exists(error_note_ratio_file) and os.path.exists(parallel_error_note_ratio_file):
         print('Loading Bach chorale histograms')
         with open(histograms_file, 'rb') as fin:
             dataset.histograms = pickle.load(fin)
         with open(error_note_ratio_file, 'rb') as fin:
             dataset.error_note_ratio = pickle.load(fin)
+        with open(parallel_error_note_ratio_file, 'rb') as fin:
+            dataset.parallel_error_note_ratio = pickle.load(fin)
     else:
         dataset.calculate_histograms()
         with open(histograms_file, 'wb') as fo:
             pickle.dump(dataset.histograms, fo)
         with open(error_note_ratio_file, 'wb') as fo:
             pickle.dump(dataset.error_note_ratio, fo)
+        with open(parallel_error_note_ratio_file, 'wb') as fo:
+            pickle.dump(dataset.parallel_error_note_ratio, fo)
 
     print('step 2/3: prepare model')
     deepbach = DeepBach(
@@ -129,7 +141,8 @@ def main(note_embedding_dim,
     if train:
         print('step 2a/3: train base model')
         deepbach.train(batch_size=batch_size,
-                       num_epochs=num_epochs)
+                       num_epochs=num_epochs,
+                       split=[0.85, 0.15])
     else:
         print('step 2a/3: load model')
         deepbach.load()
@@ -138,8 +151,10 @@ def main(note_embedding_dim,
     if update:
         print(f'step 2b/3: update base model over {update_iterations} iterations')
         for i in range(update_iterations):
+            print(f'----------- Iteration {i} -----------')
             picked_chorales = []
             num_picked_chorales = 0
+            ensure_dir(f'generations/{model_id}/{i}')
             for j in tqdm(range(generations_per_iteration)):
                 chorale, tensor_chorale, tensor_metadata = deepbach.generation(
                     num_iterations=num_iterations,
@@ -148,11 +163,19 @@ def main(note_embedding_dim,
 
                 score, scores = score_chorale(chorale, dataset)
                 # TODO: pick threshold, and also maybe weight the example by the score
-                if score < 0.5:
+                # TODO: threshold = worst Bach chorale score
+                if score < 0.35:
+                    print(f'Picked chorale {j} with score {score}')
                     picked_chorales.append(chorale)
                     num_picked_chorales += 1
 
+                chorale.write('midi', f'generations/{model_id}/{i}/c{j}_{score}.mid')
+
             print(f'Number of picked chorales for iteration {i}: {num_picked_chorales}')
+
+            if num_picked_chorales == 0:
+                continue
+
             all_datasets.update({f'generated_chorales_{i}': {'dataset_class_name': ChoraleDataset,
                                                              'corpus_it_gen': GeneratedChoraleIteratorGen(
                                                                  picked_chorales)}})
@@ -173,9 +196,17 @@ def main(note_embedding_dim,
     chorale_scores = {}
     generation_scores = {}
 
+    print('Weights for features:')
+    print(weights)
+
     print('Scoring real chorales')
-    smaller_iterator = islice(dataset.iterator_gen(), num_generations)
-    for chorale_id, chorale in tqdm(enumerate(smaller_iterator)):
+    if num_generations:
+        real_chorales = islice(dataset.iterator_gen(), num_generations)
+    else:
+        num_generations = 351
+        real_chorales = dataset.iterator_gen()
+
+    for chorale_id, chorale in tqdm(enumerate(real_chorales), total=num_generations):
         score, scores = score_chorale(chorale, dataset, weights=weights)
         chorale_scores[chorale_id] = (score, *[scores[f] for f in weights.keys()])
 
@@ -191,22 +222,23 @@ def main(note_embedding_dim,
         generation_scores[i] = (score, *[scores[f] for f in weights.keys()])
 
     # write scores to file
-    with open('data/chorale_tmp.csv', 'w') as chorale_file:
+    with open('data/chorale_scores.csv', 'w') as chorale_file:
         reader = csv.writer(chorale_file)
         reader.writerow(['', 'score'] + list(weights.keys()))
         for id, value in chorale_scores.items():
             reader.writerow([id, *value])
 
-    with open('data/generation_tmp.csv', 'w') as generation_file:
+    with open('data/generation_scores.csv', 'w') as generation_file:
         reader = csv.writer(generation_file)
         reader.writerow(['', 'score'] + list(weights.keys()))
         for id, value in generation_scores.items():
             reader.writerow([id, *value])
 
-    plot_distributions(chorale_file='data/chorale_tmp.csv',
-                       generation_file='data/generation_tmp.csv',
-                       out_file='plots/tmp.png')
-
+    for i in range(len(weights) + 1):
+        plot_distributions(chorale_file='data/chorale_scores.csv',
+                           generation_file='data/generation_scores.csv',
+                           plot_dir='plots',
+                           col=i+1)
 
 if __name__ == '__main__':
     main()
