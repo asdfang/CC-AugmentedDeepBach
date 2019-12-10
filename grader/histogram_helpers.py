@@ -21,37 +21,37 @@ def normalize_histogram(counter):
     return counter
 
 
-def histogram_to_list(h1, h2):
+def histogram_to_list(chorale_histogram, dataset_histogram):
     """
     Arguments
-      h1: Counter – this is the baseline histogram to compare h2 against
-      h2: Counter – this is the histogram that needs to be compared against the baseline
+        chorale_histogram: Counter – this is the histogram that needs to be compared against the baseline
+        dataset_histogram: Counter – this is the baseline histogram to compare chorale_histogram against
 
-    Returns two lists of the same length, with each element being the count from the histograms in the order of h1's keys.
+    Returns two lists of the same length, with each element being the count from the histograms in the order of dataset_histogram's keys.
     """
-    ordered_keys = [x[0] for x in h1.most_common()]
-    ordered_h1_vals = [x[1] for x in h1.most_common()]
-    ordered_h2_vals = []
-    h2_extras = Counter()
+    ordered_keys = [x[0] for x in dataset_histogram.most_common()]
+    ordered_dataset_histogram_vals = [x[1] for x in dataset_histogram.most_common()]
+    ordered_chorale_histogram_vals = []
+    chorale_histogram_extras = Counter()
 
-    for okey in ordered_keys:  # make h2 the same order as h1
-        ordered_h2_vals.append(h2[okey])
+    for okey in ordered_keys:  # make chorale_histogram the same order as dataset_histogram
+        ordered_chorale_histogram_vals.append(chorale_histogram[okey])
 
-    for key in h2:  # get leftover vals from h2 in ascending order
-        if key not in h1:
-            h2_extras[key] += h2[key]
-    h2_extras = [x[1] for x in h2_extras.most_common()]
-    h2_extras.reverse()
+    for key in chorale_histogram:  # get leftover vals from chorale_histogram in ascending order
+        if key not in dataset_histogram:
+            chorale_histogram_extras[key] += chorale_histogram[key]
+    chorale_histogram_extras = [x[1] for x in chorale_histogram_extras.most_common()]
+    chorale_histogram_extras.reverse()
 
     # add the leftovers
-    ordered_h1_vals.extend([0] * len(h2_extras))
-    ordered_h2_vals.extend(h2_extras)
+    ordered_dataset_histogram_vals.extend([0] * len(chorale_histogram_extras))
+    ordered_chorale_histogram_vals.extend(chorale_histogram_extras)
 
-    if len(h1) < len(h2):
-        assert ordered_h1_vals[-1] == 0
-    assert len(ordered_h1_vals) == len(ordered_h2_vals)
+    if len(dataset_histogram) < len(chorale_histogram):
+        assert ordered_dataset_histogram_vals[-1] == 0
+    assert len(ordered_dataset_histogram_vals) == len(ordered_chorale_histogram_vals)
 
-    return ordered_h1_vals, ordered_h2_vals
+    return ordered_chorale_histogram_vals, ordered_dataset_histogram_vals
 
 
 def plot_distributions(chorale_file,
@@ -75,7 +75,7 @@ def plot_distributions(chorale_file,
             if i == 0:
                 title = row[col]
                 continue
-            chorale_scores.append(float(row[col]))
+            chorale_scores.append(2-np.min([float(row[col]), 2]))
 
     with open(generation_file, 'r') as generation_file:
         reader = csv.reader(generation_file)
@@ -83,13 +83,27 @@ def plot_distributions(chorale_file,
             if i == 0:
                 assert row[col] == title
                 continue
-            generation_scores.append(float(row[col]))
+            generation_scores.append(2-np.min([float(row[col]), 2]))
 
+    # plot histograms
     plt.figure()
-    bins = np.histogram(np.hstack((chorale_scores, generation_scores)), bins=20)[1]
-    plt.hist(chorale_scores, label='real chorales', alpha=0.5, bins=bins)
-    plt.hist(generation_scores, label='generated chorales', alpha=0.5, bins=bins)
+    bins = np.histogram(np.hstack((chorale_scores, generation_scores)), bins=30)[1]
+    plt.hist(chorale_scores, label='Real chorales', alpha=0.5, bins=bins)
+    plt.hist(generation_scores, label='Generated chorales', alpha=0.5, bins=bins)
     plt.xlabel(title)
     plt.ylabel('Frequency')
+    # plt.title('Score distribution for real and generated chorales (histograms)')
     plt.legend()
     plt.savefig(os.path.join(plot_dir, f'combined_hist_{title}.png'))
+
+    # plot boxplots
+    plt.figure()
+    boxplot_data = [chorale_scores, generation_scores]
+    fig, ax = plt.subplots()
+    ax.boxplot(boxplot_data)
+    ax.set_xticklabels(['Real chorales', 'Generated chorales'])
+    plt.ylabel(title)
+    # plt.title('Score distribution for real and generated chorales (boxplot)')
+    plt.savefig(os.path.join(plot_dir, f'boxplots.png'))
+
+
