@@ -55,6 +55,7 @@ class ChoraleDataset(MusicDataset):
         self.subdivision = subdivision
         self.histograms = None
         self.error_note_ratio = None
+        self.parallel_error_note_ratio = None
 
     def __repr__(self):
         return f'ChoraleDataset(' \
@@ -543,7 +544,8 @@ class ChoraleDataset(MusicDataset):
         rh = collections.Counter()              # rhythm
         directed_ih = Counter()                 # directed intervals
         undirected_ih = Counter()               # undirected intervals
-        eh = Counter()                          # errors
+        eh = Counter()                          # errors (not including parallelism)
+        peh = Counter()                         # parallel errors (octaves and fifths)
         num_notes = 0                           # number of notes
 
         for chorale in tqdm(self.iterator_gen()):
@@ -566,24 +568,32 @@ class ChoraleDataset(MusicDataset):
             # error histogram
             eh += get_error_histogram(chorale, self.voice_ranges)
 
+            # parallel error histogram
+            peh += get_parallel_error_histogram(chorale)
+
             # number of notes
             num_notes += len(chorale.flat.notes)
 
         # proportion of errors to notes
         error_note_ratio = sum(eh.values()) / num_notes
 
+        # proportion of parallel errors to notes
+        parallel_error_note_ratio = sum(peh.values()) / num_notes
+
         histograms = {'major_note_histogram': major_nh,
                       'minor_note_histogram': minor_nh,
                       'rhythm_histogram': rh,
                       'directed_interval_histogram': directed_ih,
                       'undirected_interval_histogram': undirected_ih,
-                      'error_histogram': eh}
+                      'error_histogram': eh,
+                      'parallel_error_histogram': peh }
 
         # normalize by count total
         for hist in histograms:
             histograms[hist] = normalize_histogram(histograms[hist])
 
         self.error_note_ratio = error_note_ratio
+        self.parallel_error_note_ratio = parallel_error_note_ratio
         self.histograms = histograms
 
 

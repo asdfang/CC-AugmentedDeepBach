@@ -7,6 +7,7 @@ from collections import defaultdict
 
 
 score_methods_dict = {'error': get_error_score,
+                      'parallel_error': get_parallel_error_score,
                       'note': get_note_score,
                       'rhythm': get_rhythm_score,
                       'undirected_interval': get_undirected_interval_score,
@@ -35,8 +36,8 @@ def score_chorale(chorale, dataset, weights=None):
         feature_score = score_methods_dict[feature](chorale, dataset)
         feature_weight = weights[feature]
 
-        scores[feature] = feature_score
-        score += feature_weight*feature_score
+        scores[feature] = feature_weight*feature_score
+        score += scores[feature]
 
     return score, scores
 

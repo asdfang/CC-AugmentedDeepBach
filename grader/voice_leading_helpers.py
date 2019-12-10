@@ -12,7 +12,55 @@ def find_voice_leading_errors(chorale):
     Arguments
         chorale: a music21 Stream object; must have 4 parts
 
-    Returns how many parallel octave and fifth, hidden octave and fifth, and voice overlap errors there are
+    Returns how many hidden octave and fifth, and voice overlap errors there are
+        Counter
+    """
+
+    error_histogram = Counter()
+    for top_idx in range(0, 3):
+        for bottom_idx in range(top_idx + 1, 4):
+            top = chorale.parts[top_idx].flat.notes
+            bottom = chorale.parts[bottom_idx].flat
+
+            # go backwards; leave first note out since current note i still needs a note to move from
+            for i in range(len(top) - 1, 0, -1):
+                top_n1 = top[i - 1]
+                top_n2 = top[i]
+
+                # make sure top voice's two notes are consecutive
+                if top_n1.offset + top_n1.duration.quarterLength != top_n2.offset:
+                    continue
+
+                # make sure bottom voice also has a note that occurs exactly with the top voice's second note
+                bottom_n2 = bottom.getElementsByOffset(offsetStart=top_n2.offset, classList=music21.note.Note)
+                if len(bottom_n2) == 0:
+                    continue
+                assert len(bottom_n2) == 1
+                bottom_n2 = bottom_n2[0]
+
+                # make sure bottom voice's two notes are also consecutive
+                bottom_n1 = bottom.getElementBeforeOffset(offset=bottom_n2.offset, classList=music21.note.Note)
+                if (bottom_n1 is None) or (bottom_n1.offset + bottom_n1.duration.quarterLength != bottom_n2.offset):
+                    continue
+
+                # find voice leading mistakes!
+                vlq = music21.voiceLeading.VoiceLeadingQuartet(top_n1, top_n2, bottom_n1, bottom_n2)
+
+                if vlq.hiddenOctave():
+                    error_histogram['H-8ve'] += 1
+                if vlq.hiddenFifth():
+                    error_histogram['H-5th'] += 1
+                if vlq.voiceOverlap():
+                    error_histogram['Overlap'] += 1
+
+    return error_histogram
+
+def find_parallel_8ve_5th_errors(chorale):
+    """
+    Arguments
+        chorale: a music21 Stream object; must have 4 parts
+
+    Returns how many parallel octave and fifth errors there are
         Counter
     """
 
@@ -50,12 +98,6 @@ def find_voice_leading_errors(chorale):
                     error_histogram['Prl-8ve'] += 1
                 if vlq.parallelFifth():
                     error_histogram['Prl-5th'] += 1
-                if vlq.hiddenOctave():
-                    error_histogram['H-8ve'] += 1
-                if vlq.hiddenFifth():
-                    error_histogram['H-5th'] += 1
-                if vlq.voiceOverlap():
-                    error_histogram['Overlap'] += 1
 
     return error_histogram
 

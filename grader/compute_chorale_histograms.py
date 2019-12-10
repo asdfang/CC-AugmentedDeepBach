@@ -72,7 +72,7 @@ def get_error_histogram(chorale, voice_ranges):
     Returns a count of voice leading errors founding in keys
         Counter
     """
-    possible_errors = ['Prl-8ve', 'Prl-5th', 'H-8ve', 'H-5th', 'Overlap', 'Crossing', 'Spacing', 'Range']
+    possible_errors = ['H-8ve', 'H-5th', 'Overlap', 'Crossing', 'Spacing', 'Range']
 
     # initialize counts to 0
     error_histogram = Counter()
@@ -82,3 +82,19 @@ def get_error_histogram(chorale, voice_ranges):
 
     return error_histogram
 
+def get_parallel_error_histogram(chorale):
+    """
+    Arguments
+        chorale: a music21 Stream object; must have 4 parts once chorale gets passed into its helper functions
+
+    Returns a count of voice leading errors founding in keys
+        Counter
+    """
+    possible_errors = ['Prl-8ve', 'Prl-5th']
+
+    # initialize counts to 0
+    error_histogram = Counter()
+    error_histogram += find_parallel_8ve_5th_errors(chorale)
+    error_histogram.update({error: 0 for error in possible_errors})  # doesn't over-write
+
+    return error_histogram

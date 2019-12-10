@@ -10,10 +10,24 @@ from scipy.stats import wasserstein_distance
 def get_error_score(chorale, dataset):
     num_notes = len(chorale.flat.notes)
     chorale_histogram = get_error_histogram(chorale, dataset.voice_ranges)
+
     num_errors = sum(chorale_histogram.values())
+    chorale_histogram = normalize_histogram(chorale_histogram)
     dataset_histogram = dataset.histograms['error_histogram']
     error_note_ratio = num_errors / num_notes
+
     return wasserstein_distance(*histogram_to_list(chorale_histogram, dataset_histogram)) * (error_note_ratio / dataset.error_note_ratio)
+
+def get_parallel_error_score(chorale, dataset):
+    num_notes = len(chorale.flat.notes)
+    chorale_histogram = get_parallel_error_histogram(chorale)
+
+    num_parallel_errors = sum(chorale_histogram.values())
+    chorale_histogram = normalize_histogram(chorale_histogram)
+    dataset_histogram = dataset.histograms['parallel_error_histogram']
+    parallel_error_note_ratio = num_parallel_errors / num_notes
+
+    return wasserstein_distance(*histogram_to_list(chorale_histogram, dataset_histogram)) * (parallel_error_note_ratio / dataset.parallel_error_note_ratio)
 
 
 def get_note_score(chorale, dataset):
