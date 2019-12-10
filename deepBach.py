@@ -18,12 +18,6 @@ from grader.histogram_helpers import plot_distributions
 from itertools import islice
 import pickle
 
-# error is not as useful; - .01 - .17                       .170; .5 - .085
-# parallel is useful; 0-.20; 0-2.5                          .200; .15 - .30
-# notes is a little useful – .0025 - .02; .0025 - .02       .020; 5 - .10
-# rhythm is not as useful – 0.005 - .06; 0.005 - 0.06       .060; 1 - .060
-# directed_interval is useful – .002 - .009; .002 - .011    .010; 20 - .20
-# rhythm < error < notes < directed_interval < parallel
 
 weights = {'error': .5,
            'parallel_error': .15,
@@ -163,8 +157,7 @@ def main(note_embedding_dim,
 
                 score, scores = score_chorale(chorale, dataset)
                 # TODO: pick threshold, and also maybe weight the example by the score
-                # TODO: threshold = worst Bach chorale score
-                if score < 0.35:
+                if score < 0.48: # worst Bach chorale score rounded up to nearest .01
                     print(f'Picked chorale {j} with score {score}')
                     picked_chorales.append(chorale)
                     num_picked_chorales += 1
