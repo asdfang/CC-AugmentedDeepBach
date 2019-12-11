@@ -1,5 +1,8 @@
 .DS_Store
 
+# ignore midi files
+*.mid
+
 # ignore plots made
 plots/*
 
