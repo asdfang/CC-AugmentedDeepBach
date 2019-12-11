@@ -13,6 +13,7 @@ from DatasetManager.metadata import FermataMetadata
 from DatasetManager.music_dataset import MusicDataset
 from grader.compute_chorale_histograms import *
 from grader.histogram_helpers import *
+from grader.grader import score_methods_dict
 
 
 class ChoraleDataset(MusicDataset):
@@ -539,6 +540,7 @@ class ChoraleDataset(MusicDataset):
     # TODO: use dictionary of function names
     def calculate_histograms(self):
         print('Calculating ground-truth histograms over Bach chorales')
+
         major_nh = collections.Counter()        # notes (for chorales in major)
         minor_nh = collections.Counter()        # notes (for chorales in minor)
         rh = collections.Counter()              # rhythm
@@ -586,7 +588,7 @@ class ChoraleDataset(MusicDataset):
                       'directed_interval_histogram': directed_ih,
                       'undirected_interval_histogram': undirected_ih,
                       'error_histogram': eh,
-                      'parallel_error_histogram': peh }
+                      'parallel_error_histogram': peh}
 
         # normalize by count total
         for hist in histograms:

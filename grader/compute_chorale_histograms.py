@@ -82,6 +82,7 @@ def get_error_histogram(chorale, voice_ranges):
 
     return error_histogram
 
+
 def get_parallel_error_histogram(chorale):
     """
     Arguments

@@ -13,17 +13,16 @@ from tqdm import tqdm
 
 
 @click.command()
-@click.option('--model_id', default=0,
-              help='ID of the model to train and generate from')
-@click.option('--include_transpositions', is_flag=True,
-              help='whether to include transpositions (for dataset creation, or for pointing to the right folder at generation time)')
-def main(model_id,
-         include_transpositions):
-    print(f'Model ID: {model_id}')
+@click.option('--model_ids', nargs=3,
+              help='ID of the models to compare')
+@click.option('--num_comparisons_per_model', default=10,
+              help='number of generations per model')
+def main(model_ids, num_comparisons_per_model):
+    print(f'Model IDs: {model_ids}')
 
     dataset_manager = DatasetManager()
 
-    print('step 1/3: prepare dataset')
+    print('step 1/3: prepare dataset of real Bach chorales')
     metadatas = [
         FermataMetadata(),
         TickMetadata(subdivision=4),
@@ -34,16 +33,18 @@ def main(model_id,
         'metadatas': metadatas,
         'sequences_size': 8,
         'subdivision': 4,
-        'include_transpositions': include_transpositions,
+        'include_transpositions': False,        # we only want real Bach chorales
     }
 
     bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales',
                                                                         **chorale_dataset_kwargs)
     dataset = bach_chorales_dataset
-    get_pairs(dataset, model_ids=[3, 4, 6])
+    get_pairs(dataset, model_ids=model_ids, num_comparisons_per_model=num_comparisons_per_model)
 
 
-def get_pairs(dataset, model_ids=None, eval_dir='../generations/paired_evaluation', num_comparisons_per_model=10):
+def get_pairs(dataset, model_ids=None,
+              eval_dir='../generations/paired_evaluation',
+              num_comparisons_per_model=None):
     """
     Arguments:
         dataset: dataset of real Bach chorales
