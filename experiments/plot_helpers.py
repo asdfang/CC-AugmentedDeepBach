@@ -19,12 +19,13 @@ from scipy.stats import wasserstein_distance
 '''
 Saves a plot, and returns a score
 
-ex: get_chorale_note_distribution_and_score('../generations/4/c0.mid', '../plots/bach_hist/genex_note_distribution.png',
+Put in main() of this file
+ex: get_chorale_note_distribution_and_score('../generations/4/c0.mid', '../plots/bach_hist/genex_note_distribution.png', 'Generated Example Note Distribution',
                                 histograms['major_note_histogram'], histograms['minor_note_histogram'],
                                 major_note_order, minor_note_order)
 '''
-def get_chorale_note_distribution_and_score(chorale_filename, plot_filename,
-                                                major_note_distribution, minor_note_distribution
+def get_chorale_note_distribution_and_score(chorale_filename, plot_filename, plot_title,
+                                                major_note_distribution, minor_note_distribution,
                                                 major_note_order, minor_note_order):
     """
     Arguments
@@ -38,19 +39,21 @@ def get_chorale_note_distribution_and_score(chorale_filename, plot_filename,
     Saves a plot, and returns a score
     """
     chorale = music21.converter.parse(chorale_filename)
-    key = gen.analyze('key')
+    key = chorale.analyze('key')
     chorale_histogram = normalize_histogram(get_note_histogram(chorale, key))
     note_distribution = major_note_distribution if key.mode == 'major' else minor_note_distribution
     notes = major_note_order if key.mode == 'major' else minor_note_order
 
+    chorale_list = histogram_to_list(chorale_histogram, note_distribution)[0]
     y_pos = np.arange(len(notes))
-    y_vals = chorale_histogram
+    y_vals = chorale_list
 
+    plt.figure()
     plt.bar(y_pos, y_vals, align='center')
-    plt.xticks(y_pos, objects)
+    plt.xticks(y_pos, notes)
     plt.xlabel('Scale Degree')
     plt.ylabel('Proportion')
-    plt.title('Generated Example Note Distribution')
+    plt.title(plot_title)
 
     plt.savefig(plot_filename)
 
@@ -58,7 +61,7 @@ def get_chorale_note_distribution_and_score(chorale_filename, plot_filename,
 
 # TODO: refactor histogram/distribution (don't forget about in the comments too)
 '''
-Example to plot major note distribution:
+Example to plot major note distribution (Put in main())
 note_distribution_plot('../plots/bach_hist/major_note_histogram.png', 'Major Note Distribution', histograms['major_note_histogram'], major_note_order)
 '''
 def note_distribution_plot(plot_filename, plot_title, note_distribution, note_order):
@@ -72,21 +75,22 @@ def note_distribution_plot(plot_filename, plot_title, note_distribution, note_or
     y_pos = np.arange(len(note_order))
     y_vals = [x[1] for x in note_distribution.most_common()]
 
+    plt.figure()
     plt.bar(y_pos, y_vals, align='center')
-    plt.xticks(y_pos, objects)
+    plt.xticks(y_pos, note_order)
     plt.xlabel('Scale Degree')
     plt.ylabel('Proportion')
 
     # might want to modify this title
-    plt.title('Note Distribution')
+    plt.title(plot_title)
     plt.savefig(plot_filename)
 
     return
 
 def main():
-    histograms_file = 'grader/bach_histograms.txt'
-    error_note_ratio_file = 'grader/error_note_ratio.txt'
-    parallel_error_note_ratio_file = 'grader/parallel_error_note_ratio.txt'
+    histograms_file = '../grader/bach_histograms.txt'
+    error_note_ratio_file = '../grader/error_note_ratio.txt'
+    parallel_error_note_ratio_file = '../grader/parallel_error_note_ratio.txt'
 
     major_note_order = ('5', '1', '3', '2', '6', '4', '7', '4♯', '7♭', 'Rest', '1♯', '5♯', '3♭', '2♯', '6♭', '2♭')
     minor_note_order = ('5', '1', '3', '4', '2', '7', '6', '7♯', '6♯', '3♯', 'Rest', '4♯', '2♭', '5♭', '1♯', '1♭')
@@ -99,10 +103,15 @@ def main():
         parallel_error_note_ratio = pickle.load(fin)
 
     # # bug me if this doesn't work
-    # get_chorale_note_distribution_and_score('../generations/4/c0.mid', '../plots/bach_hist/genex_note_distribution.png',
-    #                             histograms['major_note_histogram'], histograms['minor_note_histogram'],
-    #                             major_note_order, minor_note_order)
-    # note_distribution_plot('../plots/bach_hist/major_note_histogram.png', 'Major Note Distribution', histograms['major_note_histogram'], major_note_order)
+    note_distribution_plot('../plots/bach_hist/major_note_distribution.png', 'Major Note Distribution',
+                           histograms['major_note_histogram'], major_note_order)
+    note_distribution_plot('../plots/bach_hist/minor_note_distribution.png', 'Minor Note Distribution',
+                           histograms['minor_note_histogram'], minor_note_order)
+    get_chorale_note_distribution_and_score('../generations/4/c0_temp.mid', '../plots/bach_hist/gen4_c0_note_distribution.png',
+                                            'Note Distribution of Generated Chorale',
+                                            histograms['major_note_histogram'], histograms['minor_note_histogram'],
+                                            major_note_order, minor_note_order)
+
 
 if __name__ == '__main__':
     main()
