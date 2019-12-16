@@ -12,7 +12,7 @@ from DatasetManager.helpers import standard_name, SLUR_SYMBOL, START_SYMBOL, END
 from DatasetManager.metadata import FermataMetadata
 from DatasetManager.music_dataset import MusicDataset
 from grader.compute_chorale_histograms import *
-from grader.histogram_helpers import *
+from grader.distribution_helpers import *
 from grader.grader import score_methods_dict
 
 
@@ -54,7 +54,7 @@ class ChoraleDataset(MusicDataset):
         self.voice_ranges = voice_ranges
         self.metadatas = metadatas
         self.subdivision = subdivision
-        self.histograms = None
+        self.distributions = None
         self.error_note_ratio = None
         self.parallel_error_note_ratio = None
 
@@ -538,8 +538,8 @@ class ChoraleDataset(MusicDataset):
         return score
 
     # TODO: use dictionary of function names
-    def calculate_histograms(self):
-        print('Calculating ground-truth histograms over Bach chorales')
+    def calculate_distributions(self):
+        print('Calculating ground-truth distributions over Bach chorales')
 
         major_nh = collections.Counter()        # notes (for chorales in major)
         minor_nh = collections.Counter()        # notes (for chorales in minor)
@@ -582,20 +582,19 @@ class ChoraleDataset(MusicDataset):
         # proportion of parallel errors to notes
         parallel_error_note_ratio = sum(peh.values()) / num_notes
 
-        histograms = {'major_note_histogram': major_nh,
-                      'minor_note_histogram': minor_nh,
-                      'rhythm_histogram': rh,
-                      'directed_interval_histogram': directed_ih,
-                      'undirected_interval_histogram': undirected_ih,
-                      'error_histogram': eh,
-                      'parallel_error_histogram': peh}
-
-        # normalize by count total
-        for hist in histograms:
-            histograms[hist] = normalize_histogram(histograms[hist])
+        # convert histograms to distributions by normalizing
+        distributions = {'major_note_distribution': major_nh,
+                      'minor_note_distribution': minor_nh,
+                      'rhythm_distribution': rh,
+                      'directed_interval_distribution': directed_ih,
+                      'undirected_interval_distribution': undirected_ih,
+                      'error_distribution': eh,
+                      'parallel_error_distribution': peh}
+        for dist in distributions:
+            distributions[dist] = histogram_to_distribution(distributions[dist])
 
         self.error_note_ratio = error_note_ratio
         self.parallel_error_note_ratio = parallel_error_note_ratio
-        self.histograms = histograms
+        self.distributions = distributions
 
 

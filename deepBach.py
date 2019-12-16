@@ -14,7 +14,7 @@ from DeepBach.model_manager import DeepBach
 from DeepBach.helpers import *
 from grader.grader import score_chorale
 from tqdm import tqdm
-from grader.histogram_helpers import plot_distributions
+from grader.distribution_helpers import plot_distributions
 from itertools import islice
 import pickle
 
@@ -59,7 +59,7 @@ weights = {'error': .5,
               help='number of iterations of generating chorales, scoring, and updating trained model')
 @click.option('--generations_per_iteration', default=2,
               help='number of chorales to generate at each iteration')
-@click.option('--num_generations', default=5,
+@click.option('--num_generations', default=351,
               help='number of generations for scoring')
 def main(note_embedding_dim,
          meta_embedding_dim,
@@ -100,21 +100,21 @@ def main(note_embedding_dim,
     bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales',
                                                                         **chorale_dataset_kwargs)
     dataset = bach_chorales_dataset
-    histograms_file = 'grader/bach_histograms.txt'
+    distributions_file = 'grader/bach_distributions.txt'
     error_note_ratio_file = 'grader/error_note_ratio.txt'
     parallel_error_note_ratio_file = 'grader/parallel_error_note_ratio.txt'
-    if os.path.exists(histograms_file) and os.path.exists(error_note_ratio_file) and os.path.exists(parallel_error_note_ratio_file):
-        print('Loading Bach chorale histograms')
-        with open(histograms_file, 'rb') as fin:
-            dataset.histograms = pickle.load(fin)
+    if os.path.exists(distributions_file) and os.path.exists(error_note_ratio_file) and os.path.exists(parallel_error_note_ratio_file):
+        print('Loading Bach chorale distributions')
+        with open(distributions_file, 'rb') as fin:
+            dataset.distributions = pickle.load(fin)
         with open(error_note_ratio_file, 'rb') as fin:
             dataset.error_note_ratio = pickle.load(fin)
         with open(parallel_error_note_ratio_file, 'rb') as fin:
             dataset.parallel_error_note_ratio = pickle.load(fin)
     else:
-        dataset.calculate_histograms()
-        with open(histograms_file, 'wb') as fo:
-            pickle.dump(dataset.histograms, fo)
+        dataset.calculate_distributions()
+        with open(distributions_file, 'wb') as fo:
+            pickle.dump(dataset.distributions, fo)
         with open(error_note_ratio_file, 'wb') as fo:
             pickle.dump(dataset.error_note_ratio, fo)
         with open(parallel_error_note_ratio_file, 'wb') as fo:
@@ -193,12 +193,7 @@ def main(note_embedding_dim,
     print(weights)
 
     print('Scoring real chorales')
-    if num_generations:
-        real_chorales = islice(dataset.iterator_gen(), num_generations)
-    else:
-        num_generations = 351
-        real_chorales = dataset.iterator_gen()
-
+    real_chorales = islice(dataset.iterator_gen(), num_generations)
     for chorale_id, chorale in tqdm(enumerate(real_chorales), total=num_generations):
         score, scores = score_chorale(chorale, dataset, weights=weights)
         chorale_scores[chorale_id] = (score, *[scores[f] for f in weights.keys()])

@@ -24,7 +24,7 @@ def score_chorale(chorale, dataset, weights=None):
     return overall score and component scores
     """
 
-    assert dataset.histograms is not None
+    assert dataset.distributions is not None
 
     if not weights:
         weights = {feature: 1 for feature in score_methods_dict}
