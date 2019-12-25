@@ -14,9 +14,8 @@ from DeepBach.model_manager import DeepBach
 from DeepBach.helpers import *
 from grader.grader import score_chorale
 from tqdm import tqdm
-from grader.distribution_helpers import plot_distributions
+from experiments.visualize_score_dist import plot_distributions
 from itertools import islice
-import pickle
 
 
 weights = {'error': .5,
@@ -100,25 +99,7 @@ def main(note_embedding_dim,
     bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales',
                                                                         **chorale_dataset_kwargs)
     dataset = bach_chorales_dataset
-    distributions_file = 'grader/bach_distributions.txt'
-    error_note_ratio_file = 'grader/error_note_ratio.txt'
-    parallel_error_note_ratio_file = 'grader/parallel_error_note_ratio.txt'
-    if os.path.exists(distributions_file) and os.path.exists(error_note_ratio_file) and os.path.exists(parallel_error_note_ratio_file):
-        print('Loading Bach chorale distributions')
-        with open(distributions_file, 'rb') as fin:
-            dataset.distributions = pickle.load(fin)
-        with open(error_note_ratio_file, 'rb') as fin:
-            dataset.error_note_ratio = pickle.load(fin)
-        with open(parallel_error_note_ratio_file, 'rb') as fin:
-            dataset.parallel_error_note_ratio = pickle.load(fin)
-    else:
-        dataset.calculate_distributions()
-        with open(distributions_file, 'wb') as fo:
-            pickle.dump(dataset.distributions, fo)
-        with open(error_note_ratio_file, 'wb') as fo:
-            pickle.dump(dataset.error_note_ratio, fo)
-        with open(parallel_error_note_ratio_file, 'wb') as fo:
-            pickle.dump(dataset.parallel_error_note_ratio, fo)
+    load_or_pickle_distributions(dataset)
 
     print('step 2/3: prepare model')
     deepbach = DeepBach(
@@ -156,7 +137,6 @@ def main(note_embedding_dim,
                 )
 
                 score, scores = score_chorale(chorale, dataset)
-                # TODO: pick threshold, and also maybe weight the example by the score
                 if score < 0.48: # worst Bach chorale score rounded up to nearest .01
                     print(f'Picked chorale {j} with score {score}')
                     picked_chorales.append(chorale)
@@ -222,11 +202,13 @@ def main(note_embedding_dim,
         for id, value in generation_scores.items():
             reader.writerow([id, *value])
 
+    # plot score distributions
     for i in range(len(weights) + 1):
         plot_distributions(chorale_file='data/chorale_scores.csv',
                            generation_file='data/generation_scores.csv',
                            plot_dir='plots',
                            col=i+1)
+
 
 if __name__ == '__main__':
     main()
