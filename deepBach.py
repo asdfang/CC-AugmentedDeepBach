@@ -14,7 +14,7 @@ from DeepBach.model_manager import DeepBach
 from DeepBach.helpers import *
 from grader.grader import score_chorale
 from tqdm import tqdm
-from experiments.visualize_score_dist import plot_distributions
+from experiments.visualize_score_dist import plot_distributions, plot_score_per_iteration
 from itertools import islice
 
 
@@ -101,6 +101,9 @@ def main(note_embedding_dim,
     dataset = bach_chorales_dataset
     load_or_pickle_distributions(dataset)
 
+    plot_score_per_iteration(dataset, 'plots/')
+    return
+
     print('step 2/3: prepare model')
     deepbach = DeepBach(
         dataset=dataset,
@@ -176,6 +179,7 @@ def main(note_embedding_dim,
     real_chorales = islice(dataset.iterator_gen(), num_generations)
     for chorale_id, chorale in tqdm(enumerate(real_chorales), total=num_generations):
         score, scores = score_chorale(chorale, dataset, weights=weights)
+        print(score)
         chorale_scores[chorale_id] = (score, *[scores[f] for f in weights.keys()])
 
     print('Generating and scoring generated chorales')
@@ -187,6 +191,7 @@ def main(note_embedding_dim,
         )
         chorale.write('midi', f'generations/{model_id}/c{i}.mid')
         score, scores = score_chorale(chorale, dataset, weights=weights)
+        print(score)
         generation_scores[i] = (score, *[scores[f] for f in weights.keys()])
 
     # write scores to file

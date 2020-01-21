@@ -3,7 +3,6 @@ For visualizing feature distributions
 """
 
 import sys
-
 sys.path.insert(0, '../')
 
 import music21
