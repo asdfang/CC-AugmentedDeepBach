@@ -18,7 +18,6 @@ def get_error_score(chorale, dataset):
 
     return wasserstein_distance(*distribution_to_list(chorale_distribution, dataset_distribution)) * (error_note_ratio / dataset.error_note_ratio)
 
-
 def get_parallel_error_score(chorale, dataset):
     num_notes = len(chorale.flat.notes)
     chorale_histogram = get_parallel_error_histogram(chorale)
