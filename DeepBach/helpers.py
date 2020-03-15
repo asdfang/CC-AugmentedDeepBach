@@ -5,6 +5,7 @@
 import torch
 from torch.autograd import Variable
 import re, os
+import pickle
 
 
 def cuda_variable(tensor, volatile=False):
@@ -67,3 +68,27 @@ def ensure_dir(directory):
     """
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+
+def load_or_pickle_distributions(dataset):
+    distributions_file = 'grader/bach_distributions.txt'
+    error_note_ratio_file = 'grader/error_note_ratio.txt'
+    parallel_error_note_ratio_file = 'grader/parallel_error_note_ratio.txt'
+
+    if os.path.exists(distributions_file) and os.path.exists(error_note_ratio_file) and os.path.exists(
+            parallel_error_note_ratio_file):
+        print('Loading Bach chorale distributions')
+        with open(distributions_file, 'rb') as fin:
+            dataset.distributions = pickle.load(fin)
+        with open(error_note_ratio_file, 'rb') as fin:
+            dataset.error_note_ratio = pickle.load(fin)
+        with open(parallel_error_note_ratio_file, 'rb') as fin:
+            dataset.parallel_error_note_ratio = pickle.load(fin)
+    else:
+        dataset.calculate_distributions()
+        with open(distributions_file, 'wb') as fo:
+            pickle.dump(dataset.distributions, fo)
+        with open(error_note_ratio_file, 'wb') as fo:
+            pickle.dump(dataset.error_note_ratio, fo)
+        with open(parallel_error_note_ratio_file, 'wb') as fo:
+            pickle.dump(dataset.parallel_error_note_ratio, fo)

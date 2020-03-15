@@ -57,7 +57,6 @@ def get_pairs(dataset, model_ids=None,
     for model_id in model_ids:
         for i in range(num_comparisons_per_model):
             generation_files.append(('../generations', str(model_id), f'c{i}.mid'))
-            # generation_files.append(f'generations/{model_id}/c{i}.mid')
 
     random.shuffle(generation_files)
 

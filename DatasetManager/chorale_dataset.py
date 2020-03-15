@@ -1,7 +1,7 @@
 import music21
 import torch
 import numpy as np
-import collections
+from collections import Counter
 
 from music21 import interval, stream
 from torch.utils.data import TensorDataset
@@ -13,7 +13,6 @@ from DatasetManager.metadata import FermataMetadata
 from DatasetManager.music_dataset import MusicDataset
 from grader.compute_chorale_histograms import *
 from grader.distribution_helpers import *
-from grader.grader import score_methods_dict
 
 
 class ChoraleDataset(MusicDataset):
@@ -93,7 +92,7 @@ class ChoraleDataset(MusicDataset):
             # precompute all possible transpositions and corresponding metadatas
             chorale_transpositions = {}
             metadatas_transpositions = {}
-            
+
             # for every 16th-note offset in the chorale
             for offsetStart in np.arange(
                     chorale.flat.lowestOffset - (self.sequences_size - one_tick),
@@ -112,7 +111,7 @@ class ChoraleDataset(MusicDataset):
                     min_transposition_subsequence, max_transposition_subsequence = transposition
                     transpositions = range(min_transposition_subsequence, max_transposition_subsequence + 1)
                 else:
-                    transpositions = range(1)           # corresponds to no transposition
+                    transpositions = range(1)  # corresponds to no transposition
 
                 # for every possible transposition
                 for semi_tone in transpositions:
@@ -537,18 +536,17 @@ class ChoraleDataset(MusicDataset):
             score.insert(part)
         return score
 
-    # TODO: use dictionary of function names
     def calculate_distributions(self):
         print('Calculating ground-truth distributions over Bach chorales')
 
-        major_nh = collections.Counter()        # notes (for chorales in major)
-        minor_nh = collections.Counter()        # notes (for chorales in minor)
-        rh = collections.Counter()              # rhythm
-        directed_ih = Counter()                 # directed intervals
-        undirected_ih = Counter()               # undirected intervals
-        eh = Counter()                          # errors (not including parallelism)
-        peh = Counter()                         # parallel errors (octaves and fifths)
-        num_notes = 0                           # number of notes
+        major_nh = Counter()  # notes (for chorales in major)
+        minor_nh = Counter()  # notes (for chorales in minor)
+        rh = Counter()  # rhythm
+        directed_ih = Counter()  # directed intervals
+        undirected_ih = Counter()  # undirected intervals
+        eh = Counter()  # errors (not including parallelism)
+        peh = Counter()  # parallel errors (octaves and fifths)
+        num_notes = 0  # number of notes
 
         for chorale in tqdm(self.iterator_gen()):
             # note histograms
@@ -584,17 +582,16 @@ class ChoraleDataset(MusicDataset):
 
         # convert histograms to distributions by normalizing
         distributions = {'major_note_distribution': major_nh,
-                      'minor_note_distribution': minor_nh,
-                      'rhythm_distribution': rh,
-                      'directed_interval_distribution': directed_ih,
-                      'undirected_interval_distribution': undirected_ih,
-                      'error_distribution': eh,
-                      'parallel_error_distribution': peh}
+                         'minor_note_distribution': minor_nh,
+                         'rhythm_distribution': rh,
+                         'directed_interval_distribution': directed_ih,
+                         'undirected_interval_distribution': undirected_ih,
+                         'error_distribution': eh,
+                         'parallel_error_distribution': peh}
+
         for dist in distributions:
             distributions[dist] = histogram_to_distribution(distributions[dist])
 
         self.error_note_ratio = error_note_ratio
         self.parallel_error_note_ratio = parallel_error_note_ratio
         self.distributions = distributions
-
-
