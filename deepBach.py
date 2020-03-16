@@ -130,7 +130,7 @@ def main(note_embedding_dim,
 
     if update:
         print(f'step 2b/3: update base model over {update_iterations} iterations')
-        thres = get_threshold('data/chorale_scores.csv')
+        thres = get_threshold('data/chorale_scores.csv', col=-1)
         print(f'Threshold for selection: {thres}')
         update_file = open('data/update_scores.csv', 'w')
         reader = csv.writer(update_file)

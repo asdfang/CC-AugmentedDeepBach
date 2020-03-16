@@ -9,9 +9,11 @@ class MusicDataset(ABC):
     Abstract Base Class for music datasets
     """
 
-    def __init__(self, cache_dir):
+    def __init__(self, cache_dir, include_transpositions):
         self._tensor_dataset = None
-        self.cache_dir = cache_dir
+        folder = 'with_transpositions' if include_transpositions else 'without_transpositions'
+        self.cache_dir = os.path.join(cache_dir, folder)
+        self.include_transpositions = include_transpositions
 
     @abstractmethod
     def iterator_gen(self):
@@ -22,7 +24,7 @@ class MusicDataset(ABC):
         pass
 
     @abstractmethod
-    def make_tensor_dataset(self):
+    def make_tensor_dataset(self, include_transpositions=False):
         """
 
         :return: TensorDataset
@@ -130,7 +132,7 @@ class MusicDataset(ABC):
             else:
                 print(f'Creating {self.__repr__()} TensorDataset'
                       f' since it is not cached')
-                self._tensor_dataset = self.make_tensor_dataset()
+                self._tensor_dataset = self.make_tensor_dataset(include_transpositions=self.include_transpositions)
                 torch.save(self._tensor_dataset, self.tensor_dataset_filepath)
                 print(f'TensorDataset for {self.__repr__()} '
                       f'saved in {self.tensor_dataset_filepath}')
@@ -177,16 +179,12 @@ class MusicDataset(ABC):
         :param split:
         :return:
         """
-        assert sum(split) < 1
+        assert sum(split) <= 1
 
         dataset = self.tensor_dataset
         num_examples = len(dataset)
         a, b = split
         train_dataset = TensorDataset(*dataset[: int(a * num_examples)])
-        val_dataset = TensorDataset(*dataset[int(a * num_examples):
-                                             int((a + b) * num_examples)])
-        eval_dataset = TensorDataset(*dataset[int((a + b) * num_examples):])
-
         train_dl = DataLoader(
             train_dataset,
             batch_size=batch_size,
@@ -196,21 +194,29 @@ class MusicDataset(ABC):
             drop_last=True,
         )
 
-        val_dl = DataLoader(
-            val_dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            num_workers=0,
-            pin_memory=False,
-            drop_last=True,
-        )
+        val_dl, eval_dl = None, None
 
-        eval_dl = DataLoader(
-            eval_dataset,
-            batch_size=batch_size,
-            shuffle=False,
-            num_workers=0,
-            pin_memory=False,
-            drop_last=True,
-        )
+        if a < 1:
+            val_dataset = TensorDataset(*dataset[int(a * num_examples):
+                                                 int((a + b) * num_examples)])
+            val_dl = DataLoader(
+                val_dataset,
+                batch_size=batch_size,
+                shuffle=False,
+                num_workers=0,
+                pin_memory=False,
+                drop_last=True,
+            )
+
+        if a + b < 1:
+            eval_dataset = TensorDataset(*dataset[int((a + b) * num_examples):])
+            eval_dl = DataLoader(
+                eval_dataset,
+                batch_size=batch_size,
+                shuffle=False,
+                num_workers=0,
+                pin_memory=False,
+                drop_last=True,
+            )
+
         return train_dl, val_dl, eval_dl

@@ -1,15 +1,19 @@
 import music21
 import torch
 import numpy as np
+from collections import Counter
 
 from music21 import interval, stream
 from torch.utils.data import TensorDataset
 from tqdm import tqdm
+from sklearn.mixture import GaussianMixture
 
 from DatasetManager.helpers import standard_name, SLUR_SYMBOL, START_SYMBOL, END_SYMBOL, \
     standard_note, OUT_OF_RANGE, REST_SYMBOL
 from DatasetManager.metadata import FermataMetadata
 from DatasetManager.music_dataset import MusicDataset
+from grader.compute_chorale_histograms import *
+from grader.distribution_helpers import *
 
 
 class ChoraleDataset(MusicDataset):
@@ -21,10 +25,14 @@ class ChoraleDataset(MusicDataset):
                  corpus_it_gen,
                  name,
                  voice_ids,
+                 index2note_dicts=None,
+                 note2index_dicts=None,
+                 voice_ranges=None,
                  metadatas=None,
                  sequences_size=8,
                  subdivision=4,
-                 cache_dir=None):
+                 cache_dir=None,
+                 include_transpositions=False):
         """
         :param corpus_it_gen: calling this function returns an iterator
         over chorales (as music21 scores)
@@ -35,18 +43,21 @@ class ChoraleDataset(MusicDataset):
         :param subdivision: number of sixteenth notes per beat
         :param cache_dir: directory where tensor_dataset is stored
         """
-        super(ChoraleDataset, self).__init__(cache_dir=cache_dir)
+        super(ChoraleDataset, self).__init__(cache_dir=cache_dir, include_transpositions=include_transpositions)
         self.voice_ids = voice_ids
-        # TODO WARNING voice_ids is never used!
         self.num_voices = len(voice_ids)
         self.name = name
         self.sequences_size = sequences_size
-        self.index2note_dicts = None
-        self.note2index_dicts = None
+        self.index2note_dicts = index2note_dicts
+        self.note2index_dicts = note2index_dicts
         self.corpus_it_gen = corpus_it_gen
-        self.voice_ranges = None  # in midi pitch
+        self.voice_ranges = voice_ranges
         self.metadatas = metadatas
         self.subdivision = subdivision
+        self.distributions = None
+        self.error_note_ratio = None
+        self.parallel_error_note_ratio = None
+        self.gaussian = None
 
     def __repr__(self):
         return f'ChoraleDataset(' \
@@ -62,40 +73,50 @@ class ChoraleDataset(MusicDataset):
                 if self.is_valid(chorale)
                 )
 
-    def make_tensor_dataset(self):
+    def make_tensor_dataset(self, include_transpositions=True):
         """
         Implementation of the make_tensor_dataset abstract base class
         """
-        # todo check on chorale with Chord
+
         print('Making tensor dataset')
-        self.compute_index_dicts()
-        self.compute_voice_ranges()
+
+        # use index dicts and voice ranges from base dataset, if provided
+        if self.index2note_dicts is None or self.note2index_dicts is None:
+            self.compute_index_dicts()
+        if self.voice_ranges is None:
+            self.compute_voice_ranges()
+
         one_tick = 1 / self.subdivision
         chorale_tensor_dataset = []
         metadata_tensor_dataset = []
-        for chorale_id, chorale in tqdm(enumerate(self.iterator_gen())):
 
+        for chorale_id, chorale in tqdm(enumerate(self.iterator_gen())):
             # precompute all possible transpositions and corresponding metadatas
             chorale_transpositions = {}
             metadatas_transpositions = {}
 
-            # main loop
+            # for every 16th-note offset in the chorale
             for offsetStart in np.arange(
-                    chorale.flat.lowestOffset -
-                    (self.sequences_size - one_tick),
+                    chorale.flat.lowestOffset - (self.sequences_size - one_tick),
                     chorale.flat.highestOffset,
                     one_tick):
+
                 offsetEnd = offsetStart + self.sequences_size
+
                 current_subseq_ranges = self.voice_range_in_subsequence(
                     chorale,
                     offsetStart=offsetStart,
                     offsetEnd=offsetEnd)
 
-                transposition = self.min_max_transposition(current_subseq_ranges)
-                min_transposition_subsequence, max_transposition_subsequence = transposition
+                if include_transpositions:
+                    transposition = self.min_max_transposition(current_subseq_ranges)
+                    min_transposition_subsequence, max_transposition_subsequence = transposition
+                    transpositions = range(min_transposition_subsequence, max_transposition_subsequence + 1)
+                else:
+                    transpositions = range(1)  # corresponds to no transposition
 
-                for semi_tone in range(min_transposition_subsequence,
-                                       max_transposition_subsequence + 1):
+                # for every possible transposition
+                for semi_tone in transpositions:
                     start_tick = int(offsetStart * self.subdivision)
                     end_tick = int(offsetEnd * self.subdivision)
 
@@ -103,15 +124,10 @@ class ChoraleDataset(MusicDataset):
                         # compute transpositions lazily
                         if semi_tone not in chorale_transpositions:
                             (chorale_tensor,
-                             metadata_tensor) = self.transposed_score_and_metadata_tensors(
-                                chorale,
-                                semi_tone=semi_tone)
-                            chorale_transpositions.update(
-                                {semi_tone:
-                                     chorale_tensor})
-                            metadatas_transpositions.update(
-                                {semi_tone:
-                                     metadata_tensor})
+                             metadata_tensor) = self.transposed_score_and_metadata_tensors(chorale,
+                                                                                           semi_tone=semi_tone)
+                            chorale_transpositions.update({semi_tone: chorale_tensor})
+                            metadatas_transpositions.update({semi_tone: metadata_tensor})
                         else:
                             chorale_tensor = chorale_transpositions[semi_tone]
                             metadata_tensor = metadatas_transpositions[semi_tone]
@@ -184,8 +200,7 @@ class ChoraleDataset(MusicDataset):
 
         # add voice indexes
         voice_id_metada = torch.from_numpy(np.arange(self.num_voices)).long().clone()
-        square_metadata = torch.transpose(voice_id_metada.repeat(chorale_length, 1),
-                                          0, 1)
+        square_metadata = torch.transpose(voice_id_metada.repeat(chorale_length, 1), 0, 1)
         md.append(square_metadata[:, :, None])
 
         all_metadata = torch.cat(md, 2)
@@ -216,6 +231,9 @@ class ChoraleDataset(MusicDataset):
         return metadata_tensor
 
     def min_max_transposition(self, current_subseq_ranges):
+        """
+        return min and max transposition for the subsequence, in MIDI pitches
+        """
         if current_subseq_ranges is None:
             # todo might be too restrictive
             # there is no note in one part
@@ -313,7 +331,7 @@ class ChoraleDataset(MusicDataset):
         :param chorale:
         :param offsetStart:
         :param offsetEnd:
-        :return:
+        :return: list of (min, max midi pitch) for each voice in subsequence
         """
         voice_ranges = []
         for part in chorale.parts[:self.num_voices]:
@@ -327,6 +345,9 @@ class ChoraleDataset(MusicDataset):
         return voice_ranges
 
     def voice_range_in_part(self, part, offsetStart, offsetEnd):
+        """
+        return min and max midi pitch of notes between offsetStart and offsetEnd of part
+        """
         notes_in_subsequence = part.flat.getElementsByOffset(
             offsetStart,
             offsetEnd,
@@ -380,7 +401,6 @@ class ChoraleDataset(MusicDataset):
         # We only consider 4-part chorales
         if not len(chorale.parts) == 4:
             return False
-        # todo contains chord
         return True
 
     def compute_voice_ranges(self):
@@ -415,7 +435,6 @@ class ChoraleDataset(MusicDataset):
         length = tensor_score.size()[1]
 
         padded_chorale = []
-        # todo add PAD_SYMBOL
         if start_tick < 0:
             start_symbols = np.array([note2index[START_SYMBOL]
                                       for note2index in self.note2index_dicts])
@@ -519,94 +538,62 @@ class ChoraleDataset(MusicDataset):
             score.insert(part)
         return score
 
+    def calculate_distributions(self):
+        print('Calculating ground-truth distributions over Bach chorales')
 
-# TODO should go in ChoraleDataset
-# TODO all subsequences start on a beat
-class ChoraleBeatsDataset(ChoraleDataset):
-    def __repr__(self):
-        return f'ChoraleBeatsDataset(' \
-               f'{self.voice_ids},' \
-               f'{self.name},' \
-               f'{[metadata.name for metadata in self.metadatas]},' \
-               f'{self.sequences_size},' \
-               f'{self.subdivision})'
+        major_nh = Counter()  # notes (for chorales in major)
+        minor_nh = Counter()  # notes (for chorales in minor)
+        rh = Counter()  # rhythm
+        directed_ih = Counter()  # directed intervals
+        undirected_ih = Counter()  # undirected intervals
+        eh = Counter()  # errors (not including parallelism)
+        peh = Counter()  # parallel errors (octaves and fifths)
+        num_notes = 0  # number of notes
 
-    def make_tensor_dataset(self):
-        """
-        Implementation of the make_tensor_dataset abstract base class
-        """
-        # todo check on chorale with Chord
-        print('Making tensor dataset')
-        self.compute_index_dicts()
-        self.compute_voice_ranges()
-        one_beat = 1.
-        chorale_tensor_dataset = []
-        metadata_tensor_dataset = []
-        for chorale_id, chorale in tqdm(enumerate(self.iterator_gen())):
+        for chorale in tqdm(self.iterator_gen()):
+            # note histograms
+            key = chorale.analyze('key')
+            chorale_nh = get_note_histogram(chorale, key)
+            if key.mode == 'major':
+                major_nh += chorale_nh
+            else:
+                minor_nh += chorale_nh
 
-            # precompute all possible transpositions and corresponding metadatas
-            chorale_transpositions = {}
-            metadatas_transpositions = {}
+            # rhythm histogram
+            rh += get_rhythm_histogram(chorale)
 
-            # main loop
-            for offsetStart in np.arange(
-                    chorale.flat.lowestOffset -
-                    (self.sequences_size - one_beat),
-                    chorale.flat.highestOffset,
-                    one_beat):
-                offsetEnd = offsetStart + self.sequences_size
-                current_subseq_ranges = self.voice_range_in_subsequence(
-                    chorale,
-                    offsetStart=offsetStart,
-                    offsetEnd=offsetEnd)
+            # interval histogram
+            r1, r2 = get_interval_histogram(chorale)
+            directed_ih += r1
+            undirected_ih += r2
 
-                transposition = self.min_max_transposition(current_subseq_ranges)
-                min_transposition_subsequence, max_transposition_subsequence = transposition
+            # error histogram
+            eh += get_error_histogram(chorale, self.voice_ranges)
 
-                for semi_tone in range(min_transposition_subsequence,
-                                       max_transposition_subsequence + 1):
-                    start_tick = int(offsetStart * self.subdivision)
-                    end_tick = int(offsetEnd * self.subdivision)
+            # parallel error histogram
+            peh += get_parallel_error_histogram(chorale)
 
-                    try:
-                        # compute transpositions lazily
-                        if semi_tone not in chorale_transpositions:
-                            (chorale_tensor,
-                             metadata_tensor) = self.transposed_score_and_metadata_tensors(
-                                chorale,
-                                semi_tone=semi_tone)
-                            chorale_transpositions.update(
-                                {semi_tone:
-                                     chorale_tensor})
-                            metadatas_transpositions.update(
-                                {semi_tone:
-                                     metadata_tensor})
-                        else:
-                            chorale_tensor = chorale_transpositions[semi_tone]
-                            metadata_tensor = metadatas_transpositions[semi_tone]
+            # number of notes
+            num_notes += len(chorale.flat.notes)
 
-                        local_chorale_tensor = self.extract_score_tensor_with_padding(
-                            chorale_tensor,
-                            start_tick, end_tick)
-                        local_metadata_tensor = self.extract_metadata_with_padding(
-                            metadata_tensor,
-                            start_tick, end_tick)
+        # proportion of errors to notes
+        error_note_ratio = sum(eh.values()) / num_notes
 
-                        # append and add batch dimension
-                        # cast to int
-                        chorale_tensor_dataset.append(
-                            local_chorale_tensor[None, :, :].int())
-                        metadata_tensor_dataset.append(
-                            local_metadata_tensor[None, :, :, :].int())
-                    except KeyError:
-                        # some problems may occur with the key analyzer
-                        print(f'KeyError with chorale {chorale_id}')
+        # proportion of parallel errors to notes
+        parallel_error_note_ratio = sum(peh.values()) / num_notes
 
-        chorale_tensor_dataset = torch.cat(chorale_tensor_dataset, 0)
-        metadata_tensor_dataset = torch.cat(metadata_tensor_dataset, 0)
+        # convert histograms to distributions by normalizing
+        distributions = {'major_note_distribution': major_nh,
+                         'minor_note_distribution': minor_nh,
+                         'rhythm_distribution': rh,
+                         'directed_interval_distribution': directed_ih,
+                         'undirected_interval_distribution': undirected_ih,
+                         'error_distribution': eh,
+                         'parallel_error_distribution': peh}
 
-        dataset = TensorDataset(chorale_tensor_dataset,
-                                metadata_tensor_dataset)
+        for dist in distributions:
+            distributions[dist] = histogram_to_distribution(distributions[dist])
 
-        print(f'Sizes: {chorale_tensor_dataset.size()}, {metadata_tensor_dataset.size()}')
-        return dataset
+        self.error_note_ratio = error_note_ratio
+        self.parallel_error_note_ratio = parallel_error_note_ratio
+        self.distributions = distributions
