@@ -77,5 +77,3 @@ def _get_interval_score(chorale, dataset, directed=True):
     dataset_distribution = dataset.distributions[key]
 
     return wasserstein_distance(*distribution_to_list(chorale_distribution, dataset_distribution))
-
-

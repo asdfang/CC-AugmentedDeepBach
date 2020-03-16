@@ -13,16 +13,12 @@ from tqdm import tqdm
 
 
 @click.command()
-@click.option('--model_ids', nargs=3,
-              help='ID of the models to compare')
-@click.option('--num_comparisons_per_model', default=10,
-              help='number of generations per model')
-def main(model_ids, num_comparisons_per_model):
-    print(f'Model IDs: {model_ids}')
-
+@click.option('--include_transpositions', is_flag=True,
+              help='whether to include transpositions (for dataset creation, or for pointing to the right folder at generation time)')
+def main(include_transpositions):
     dataset_manager = DatasetManager()
 
-    print('step 1/3: prepare dataset of real Bach chorales')
+    print('step 1/3: prepare dataset')
     metadatas = [
         FermataMetadata(),
         TickMetadata(subdivision=4),
@@ -33,18 +29,16 @@ def main(model_ids, num_comparisons_per_model):
         'metadatas': metadatas,
         'sequences_size': 8,
         'subdivision': 4,
-        'include_transpositions': False,        # we only want real Bach chorales
+        'include_transpositions': include_transpositions,
     }
 
     bach_chorales_dataset: ChoraleDataset = dataset_manager.get_dataset(name='bach_chorales',
                                                                         **chorale_dataset_kwargs)
     dataset = bach_chorales_dataset
-    get_pairs(dataset, model_ids=model_ids, num_comparisons_per_model=num_comparisons_per_model)
+    get_pairs(dataset, model_ids=[5,9])
 
 
-def get_pairs(dataset, model_ids=None,
-              eval_dir='../generations/paired_evaluation',
-              num_comparisons_per_model=None):
+def get_pairs(dataset, model_ids=None, eval_dir='../generations/paired_evaluation', num_comparisons_per_model=10):
     """
     Arguments:
         dataset: dataset of real Bach chorales
@@ -56,11 +50,11 @@ def get_pairs(dataset, model_ids=None,
     generation_files = []
     for model_id in model_ids:
         for i in range(num_comparisons_per_model):
-            generation_files.append(('../generations', str(model_id), f'c{i}.mid'))
+            generation_files.append(('../generations/20', str(model_id), f'c{i}.mid'))
 
     random.shuffle(generation_files)
 
-    for i, chorale in tqdm(enumerate(real_chorales), total=num_comparisons_per_model):
+    for i, chorale in tqdm(enumerate(real_chorales)):
         pair_dir = os.path.join(eval_dir, f'{i}')
         ensure_dir(pair_dir)
         chorale.write('midi', f'{pair_dir}/chorale_{i}.mid')
