@@ -1,0 +1,122 @@
+step 1/5: initialize empty metadata
+step 2/5: load pre-existing dataset
+Loading ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4) from /home/alisa/deepbach/DatasetManager/dataset_cache/datasets/ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4)
+(the corresponding TensorDataset is not loaded)
+step 3/5: create model architecture
+step 4/5: train model
+===Epoch 0===
+Loading TensorDataset for ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4)
+Training loss: 0.30352078666705207
+Training accuracy: 91.33448452515546
+Validation loss: 0.1723125620124987
+Validation accuracy: 94.37819260817308
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),0,20,20,2,256,0.5,256) saved
+===Epoch 1===
+Training loss: 0.1418534857323609
+Training accuracy: 95.3472786531939
+Validation loss: 0.13957748039515885
+Validation accuracy: 95.42987530048077
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),0,20,20,2,256,0.5,256) saved
+===Epoch 2===
+Training loss: 0.1148974056981626
+Training accuracy: 96.17478978236292
+Validation loss: 0.12340410045012853
+Validation accuracy: 96.0345928485577
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),0,20,20,2,256,0.5,256) saved
+===Epoch 3===
+Training loss: 0.09952034905380182
+Training accuracy: 96.65385192905596
+Validation loss: 0.11571229855829958
+Validation accuracy: 96.24868539663461
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),0,20,20,2,256,0.5,256) saved
+===Epoch 4===
+Training loss: 0.08878957324304895
+Training accuracy: 97.00152805257207
+Validation loss: 0.1184168297902663
+Validation accuracy: 96.20267427884616
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),0,20,20,2,256,0.5,256) saved
+===Epoch 0===
+Training loss: 0.39353292625146846
+Training accuracy: 88.91565679762577
+Validation loss: 0.21910965585602055
+Validation accuracy: 93.06922325721153
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),1,20,20,2,256,0.5,256) saved
+===Epoch 1===
+Training loss: 0.1848063170320237
+Training accuracy: 94.04567375635952
+Validation loss: 0.17843626613186922
+Validation accuracy: 94.3500225360577
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),1,20,20,2,256,0.5,256) saved
+===Epoch 2===
+Training loss: 0.14931623255249604
+Training accuracy: 95.12690344120972
+Validation loss: 0.16094605537644105
+Validation accuracy: 94.9462890625
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),1,20,20,2,256,0.5,256) saved
+===Epoch 3===
+Training loss: 0.12887458658449188
+Training accuracy: 95.76329759044658
+Validation loss: 0.15342221105954826
+Validation accuracy: 95.20733173076923
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),1,20,20,2,256,0.5,256) saved
+===Epoch 4===
+Training loss: 0.11527557045941537
+Training accuracy: 96.16926936122103
+Validation loss: 0.15545106548205906
+Validation accuracy: 95.36884014423077
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),1,20,20,2,256,0.5,256) saved
+===Epoch 0===
+Training loss: 0.4026980037790965
+Training accuracy: 88.64637065432447
+Validation loss: 0.2335037350626058
+Validation accuracy: 92.90114182692308
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),2,20,20,2,256,0.5,256) saved
+===Epoch 1===
+Training loss: 0.20149982960367183
+Training accuracy: 93.59807801017524
+Validation loss: 0.19610671329535131
+Validation accuracy: 94.0044696514423
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),2,20,20,2,256,0.5,256) saved
+===Epoch 2===
+Training loss: 0.16347208121078644
+Training accuracy: 94.63878780384398
+Validation loss: 0.1746852077429559
+Validation accuracy: 94.71341646634616
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),2,20,20,2,256,0.5,256) saved
+===Epoch 3===
+Training loss: 0.1417917725764354
+Training accuracy: 95.34396640050876
+Validation loss: 0.17430363460259565
+Validation accuracy: 94.80731670673077
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),2,20,20,2,256,0.5,256) saved
+===Epoch 4===
+Training loss: 0.12512793905776123
+Training accuracy: 95.83020509468626
+Validation loss: 0.16001543869130658
+Validation accuracy: 95.2533428485577
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),2,20,20,2,256,0.5,256) saved
+===Epoch 0===
+Training loss: 0.37061395954789245
+Training accuracy: 89.40344120972301
+Validation loss: 0.19995375086839956
+Validation accuracy: 93.73028094951923
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),3,20,20,2,256,0.5,256) saved
+===Epoch 1===
+Training loss: 0.16276904236401052
+Training accuracy: 94.73925946862634
+Validation loss: 0.16096710843759446
+Validation accuracy: 94.88431490384616
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),3,20,20,2,256,0.5,256) saved
+===Epoch 2===
+Training loss: 0.129162208307187
+Training accuracy: 95.74795081967213
+Validation loss: 0.1487387318696934
+Validation accuracy: 95.34630408653847
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),3,20,20,2,256,0.5,256) saved
+===Epoch 3===
+Training loss: 0.11105802797998258
+Training accuracy: 96.31776868993782
+Validation loss: 0.14608752749784168
+Validation accuracy: 95.6927959735577
+Model VoiceModel(ChoraleDataset([0, 1, 2, 3],bach_chorales,['fermata', 'tick', 'key'],8,4),3,20,20,2,256,0.5,256) saved
+===Epoch 4===
