@@ -1,11 +1,15 @@
 .DS_Store
+.vscode/
+cortex_key
+cortex_key.pub
 
 # ignore midi files
 *.mid
 
 # ignore
 plots/*
-generations/*
+generations/**
+models/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
