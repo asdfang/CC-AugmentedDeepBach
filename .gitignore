@@ -1,3 +1,12 @@
+.DS_Store
+
+# ignore midi files
+*.mid
+
+# ignore
+plots/*
+generations/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
