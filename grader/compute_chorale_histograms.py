@@ -4,6 +4,7 @@ functions for computing the distribution for a given chorale
 
 from collections import Counter
 from grader.voice_leading_helpers import *
+import music21
 
 
 def get_note_histogram(chorale, key):
@@ -44,6 +45,27 @@ def get_rhythm_histogram(chorale):
     return rh
 
 
+def get_harmonic_quality_histogram(chorale):
+    """
+    Arguments
+        chorale: a music21 Stream object
+
+    Returns a harmonic quality (i.e. ignores root) histogram as calculated by music21.harmony.chordSymbolFigureFromChord()
+    """
+
+    hqh = Counter()       # harmony qualities
+    
+    chfy = chorale.chordify()
+    for c in chfy.flat.getElementsByClass(music21.chord.Chord):
+        csf = music21.harmony.chordSymbolFigureFromChord(c, True)
+        if csf[0] == 'Chord Symbol Cannot Be Identified':
+            hqh['unidentifiable'] += 1
+        else:
+            hqh[csf[1]] += 1
+
+    return hqh
+
+
 def get_interval_histogram(chorale):
     """
     Arguments
@@ -63,6 +85,46 @@ def get_interval_histogram(chorale):
 
     return directed_ih, undirected_ih
 
+
+def get_SATB_interval_histograms(chorale):
+    """
+    Arguments
+        chorale: a music21 Stream object
+
+    Returns two lists of interval histograms, one directed and one undirected,
+    with each list containing one histogram per voice in the order of Soprano, Alto, Tenor, Bass.
+    as collections.Counter objects for input chorale
+    """
+    assert len(chorale.parts) == 4
+
+    directed_ihs = []
+    S_directed_ih = Counter()
+    A_directed_ih = Counter()
+    T_directed_ih = Counter()
+    B_directed_ih = Counter()
+    directed_ihs.append(S_directed_ih)
+    directed_ihs.append(A_directed_ih)
+    directed_ihs.append(T_directed_ih)
+    directed_ihs.append(B_directed_ih)
+
+    undirected_ihs = []
+    S_undirected_ih = Counter()
+    A_undirected_ih = Counter()
+    T_undirected_ih = Counter()
+    B_undirected_ih = Counter()
+    undirected_ihs.append(S_undirected_ih)
+    undirected_ihs.append(A_undirected_ih)
+    undirected_ihs.append(T_undirected_ih)
+    undirected_ihs.append(B_undirected_ih)
+
+    for i in range(0, 4):
+        intervals = chorale.parts[i].melodicIntervals()[1:]
+        for interval in intervals:
+            directed_ihs[i][interval.directedName] += 1
+            undirected_ihs[i][interval.name] += 1
+
+    return directed_ihs, undirected_ihs
+    
 
 def get_error_histogram(chorale, voice_ranges):
     """

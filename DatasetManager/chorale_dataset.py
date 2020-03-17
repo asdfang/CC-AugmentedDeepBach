@@ -544,14 +544,23 @@ class ChoraleDataset(MusicDataset):
     def calculate_distributions(self):
         print('Calculating ground-truth distributions over Bach chorales')
 
-        major_nh = Counter()  # notes (for chorales in major)
-        minor_nh = Counter()  # notes (for chorales in minor)
-        rh = Counter()  # rhythm
-        directed_ih = Counter()  # directed intervals
-        undirected_ih = Counter()  # undirected intervals
-        eh = Counter()  # errors (not including parallelism)
-        peh = Counter()  # parallel errors (octaves and fifths)
-        num_notes = 0  # number of notes
+        major_nh = Counter()            # notes (for chorales in major)
+        minor_nh = Counter()            # notes (for chorales in minor)
+        rh = Counter()                  # rhythm
+        hqh = Counter()                 # harmonic quality
+        directed_ih = Counter()         # directed intervals for whole chorale
+        S_directed_ih = Counter()       # ... for soprano
+        A_directed_ih = Counter()       # ... for alto
+        T_directed_ih = Counter()       # ... for tenor
+        B_directed_ih = Counter()       # ... for bass
+        undirected_ih = Counter()       # undirected intervals for whole chorale
+        S_undirected_ih = Counter()     # ... for soprano
+        A_undirected_ih = Counter()     # ... for alto
+        T_undirected_ih = Counter()     # ... for tenor
+        B_undirected_ih = Counter()     # ... for bass
+        eh = Counter()                  # errors (not including parallelism)
+        peh = Counter()                 # parallel errors (octaves and fifths)
+        num_notes = 0                   # number of notes
 
         for chorale in tqdm(self.iterator_gen()):
             # note histograms
@@ -564,17 +573,27 @@ class ChoraleDataset(MusicDataset):
 
             # rhythm histogram
             rh += get_rhythm_histogram(chorale)
-            # interval histogram
+            # harmonic quality histogram
+            hqh += get_harmonic_quality_histogram(chorale)
+            # interval histograms
             r1, r2 = get_interval_histogram(chorale)
+            mr1, mr2 = get_SATB_interval_histograms(chorale)
             directed_ih += r1
+            S_directed_ih += mr1[0]
+            A_directed_ih += mr1[1]
+            T_directed_ih += mr1[2]
+            B_directed_ih += mr1[3]
             undirected_ih += r2
+            S_undirected_ih += mr2[0]
+            A_undirected_ih += mr2[1]
+            T_undirected_ih += mr2[2]
+            B_undirected_ih += mr2[3]
             # error histogram
             eh += get_error_histogram(chorale, self.voice_ranges)
             # parallel error histogram
             peh += get_parallel_error_histogram(chorale)
             # number of notes
             num_notes += len(chorale.flat.notes)
-            # harmonies histogram
 
         # proportion of errors to notes
         error_note_ratio = sum(eh.values()) / num_notes
@@ -586,8 +605,17 @@ class ChoraleDataset(MusicDataset):
         distributions = {'major_note_distribution': major_nh,
                          'minor_note_distribution': minor_nh,
                          'rhythm_distribution': rh,
+                         'harmonic_quality_distribution': hqh,
                          'directed_interval_distribution': directed_ih,
+                         'S_directed_interval_distribution': S_directed_ih,
+                         'A_directed_interval_distribution': A_directed_ih,
+                         'T_directed_interval_distribution': T_directed_ih,
+                         'B_directed_interval_distribution': B_directed_ih,
                          'undirected_interval_distribution': undirected_ih,
+                         'S_undirected_interval_distribution': S_undirected_ih,
+                         'A_undirected_interval_distribution': A_undirected_ih,
+                         'T_undirected_interval_distribution': T_undirected_ih,
+                         'B_undirected_interval_distribution': B_undirected_ih,
                          'error_distribution': eh,
                          'parallel_error_distribution': peh}
 
