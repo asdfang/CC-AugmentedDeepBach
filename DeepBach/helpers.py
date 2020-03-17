@@ -72,10 +72,10 @@ def ensure_dir(directory):
 
 
 def load_or_pickle_distributions(dataset):
-    distributions_file = 'grader/bach_distributions.txt'
-    error_note_ratio_file = 'grader/error_note_ratio.txt'
-    parallel_error_note_ratio_file = 'grader/parallel_error_note_ratio.txt'
-    gaussian_file = 'grader/gaussian.txt'
+    distributions_file = 'grader/pickles/bach_distributions.txt'
+    error_note_ratio_file = 'grader/pickles/error_note_ratio.txt'
+    parallel_error_note_ratio_file = 'grader/pickles/parallel_error_note_ratio.txt'
+    gaussian_file = 'grader/pickles/gaussian.txt'
 
     if os.path.exists(distributions_file) and os.path.exists(error_note_ratio_file) and os.path.exists(
             parallel_error_note_ratio_file) and os.path.exists(gaussian_file):
@@ -104,8 +104,9 @@ def get_threshold(data_file=None, col=-1):
     thres = np.NINF         # minimum score seen so far
     
     with open(data_file, 'r') as fin:
+        next(fin)
         for row in fin:
-            s = row.split(',')[col]
+            s = float(row.split(',')[col])
             if s > thres:
                 thres = s
     return thres
