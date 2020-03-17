@@ -208,7 +208,6 @@ def main(note_embedding_dim,
             )
             chorale.write('midi', f'generations/{model_id}/c{i}.mid')
             score = score_chorale(chorale, dataset)
-            print(score)
             generation_scores[i] = score
 
         # write scores to file

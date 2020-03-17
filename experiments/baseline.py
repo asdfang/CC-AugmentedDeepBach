@@ -4,6 +4,9 @@
 
 import click
 import csv
+import sys
+
+sys.path[0] += '/../'
 
 from DatasetManager.chorale_dataset import ChoraleDataset
 from DatasetManager.dataset_manager import DatasetManager, all_datasets
@@ -121,13 +124,11 @@ def main(note_embedding_dim,
 
     if update:
         print(f'step 2/3: update base model over {update_iterations} iterations')
-        update_file = open('data/21_update_scores_over_bach_chorales.csv', 'w')
+        update_file = open(f'data/{model_id}_update_scores_over_bach_chorales.csv', 'w')
         reader = csv.writer(update_file)
         reader.writerow(['iteration', 'chorale ID', 'grade', 'error', 'parallel_error', 'note', 'rhythm', 'undirected_interval', 'directed_interval'])
         for i in range(10):
             print(f'----------- Iteration {i} -----------')
-            picked_chorales = []
-            num_picked_chorales = 0
             ensure_dir(f'generations/{model_id}/{i}')
             for j in tqdm(range(generations_per_iteration)):
                 chorale, tensor_chorale, tensor_metadata = deepbach.generation(

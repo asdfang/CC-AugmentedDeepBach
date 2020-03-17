@@ -14,6 +14,8 @@ from DatasetManager.metadata import FermataMetadata
 from DatasetManager.music_dataset import MusicDataset
 from grader.compute_chorale_histograms import *
 from grader.distribution_helpers import *
+from grader.grader import get_feature_vector
+from sklearn.mixture import GaussianMixture
 
 
 class ChoraleDataset(MusicDataset):
@@ -32,7 +34,8 @@ class ChoraleDataset(MusicDataset):
                  sequences_size=8,
                  subdivision=4,
                  cache_dir=None,
-                 include_transpositions=False):
+                 include_transpositions=False
+                 ):
         """
         :param corpus_it_gen: calling this function returns an iterator
         over chorales (as music21 scores)
@@ -561,20 +564,17 @@ class ChoraleDataset(MusicDataset):
 
             # rhythm histogram
             rh += get_rhythm_histogram(chorale)
-
             # interval histogram
             r1, r2 = get_interval_histogram(chorale)
             directed_ih += r1
             undirected_ih += r2
-
             # error histogram
             eh += get_error_histogram(chorale, self.voice_ranges)
-
             # parallel error histogram
             peh += get_parallel_error_histogram(chorale)
-
             # number of notes
             num_notes += len(chorale.flat.notes)
+            # harmonies histogram
 
         # proportion of errors to notes
         error_note_ratio = sum(eh.values()) / num_notes
@@ -597,3 +597,11 @@ class ChoraleDataset(MusicDataset):
         self.error_note_ratio = error_note_ratio
         self.parallel_error_note_ratio = parallel_error_note_ratio
         self.distributions = distributions
+
+        chorale_vectors = []
+        for chorale in tqdm(self.iterator_gen()):
+            chorale_vector = get_feature_vector(chorale, self)
+            chorale_vectors.append(chorale_vector)
+
+        gm = GaussianMixture()
+        self.gaussian = gm.fit(chorale_vectors)
