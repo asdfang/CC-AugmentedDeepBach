@@ -1,11 +1,8 @@
 This repository was built off
 
 DeepBach: a Steerable Model for Bach chorales generation
-
 Gaëtan Hadjeres, François Pachet, Frank Nielsen
-
 ICML 2017 arXiv:1612.01010
-
 https://github.com/Ghadjeres/DeepBach
 
 # DeepBach
